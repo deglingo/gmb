@@ -1,7 +1,7 @@
 #
 
 # keep '.' first for pycc
-SUBDIRS = . gmb test
+SUBDIRS = . bin gmb test
 
 all-local: pycc
 
