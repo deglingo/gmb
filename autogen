@@ -1,0 +1,96 @@
+#!/bin/sh
+
+# trace
+trace() { echo "autogen: $*"; }
+die()   { echo "autogen:ERROR: $*" >&2; exit 1; }
+
+# usage
+usage()
+{
+	cat <<EOF
+USAGE: sh ./autogen [COMMAND]
+
+COMMANDS:
+
+  -b, --boot     bootstrap package (default command)
+  -c, --clean    cleanup package
+  -h, --help     print this message and exit
+EOF
+}
+
+# proc_scan
+proc_scan()
+{
+	trace "scanning configure.ac..."
+	local out="`_proc_dump`"
+	echo "$out"
+	eval "$out"
+}
+
+# _proc_dump
+_proc_dump()
+{
+	local regex='/^[ \t]*@@\(.*\)@@[ \t]*$/!d;
+                 s,,\1,g;'
+	_dump_conf <configure.ac \
+		| m4 \
+		| sed -e "$regex"
+}
+
+# _dump_conf
+_dump_conf()
+{
+	cat <<EOF
+changequote(\`[', \`]')
+define(AC_INIT,
+[@@PACKAGE='\$1'@@]
+[@@VERSION='\$2'@@]
+)
+EOF
+	local line
+	while read line; do
+		if echo "$line" | grep -Eq '\\$'; then
+			echo -n "$line" | sed -e 's,\\$, '
+		else
+			echo "$line"
+		fi
+	done
+	# [TODO] assert line == ''
+}
+
+# proc_boot
+proc_boot()
+{
+	proc_scan
+	trace "bootstrapping package '$PACKAGE' $VERSION"
+	# [fixme]
+	echo '[TODO]' >ChangeLog
+	trace "aclocal..."
+	aclocal || die "aclocal failed"
+	trace "automake..."
+	automake --gnu --add-missing || die "automake failed"
+	trace "autoconf..."
+	autoconf || die "autoconf failed"
+	trace "all done!"
+}
+
+# main
+main()
+{
+	# parse command line
+	local cmd='boot'
+	while test $# -gt 0; do
+		case "$1" in
+			-h|-help|--help) usage; exit 0;;
+			*) echo "autogen:ERROR: invalid option: '$1'" >&2; exit 1;;
+		esac
+	done
+	# go
+	case "$cmd" in
+		boot) proc_boot;;
+		*) echo "autogen:ERROR: !? cmd='$cmd'" >&2; exit 1;;
+	esac
+}
+
+# exec
+main "${@}"

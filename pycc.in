@@ -1,0 +1,26 @@
+#!@PYTHON@
+# -*- python -*-
+
+import sys, os, py_compile
+from os.path import realpath, join, basename, splitext, exists, getmtime
+
+PYTHON_VERSION = '@PYTHON_VERSION@'
+PYTHON_VERSION_MAJ = '@PYTHON_VERSION_MAJ@'
+PYTHON_VERSION_MIN = '@PYTHON_VERSION_MIN@'
+
+srcfile = sys.argv[1]
+base = splitext(basename(srcfile))[0]
+dfile = realpath(srcfile)
+cache = join(os.getcwd(), '__pycache__')
+cfile = join(cache, '%s.cpython-%s%s.pyc' % (base, PYTHON_VERSION_MAJ, PYTHON_VERSION_MIN))
+
+# create the cache directory
+try: os.mkdir(cache)
+except FileExistsError: pass
+
+# check timestamps
+if exists(cfile) and getmtime(cfile) > getmtime(srcfile) :
+    pass # up to date
+else :
+    print("pycc: '%s' -> '%s' (%s)" % (srcfile, cfile, dfile))
+    py_compile.compile(srcfile, cfile, dfile)

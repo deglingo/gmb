@@ -1,0 +1,8 @@
+#!@SHELL@
+# -*- shell-script -*-
+
+TOP_BUILDDIR='@abs_top_builddir@'
+NOSE2='@NOSE2@'
+
+echo "gmb-test: hello!"
+"$NOSE2" --start-dir . --top-level-directory "$TOP_BUILDDIR"

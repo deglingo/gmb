@@ -1,0 +1,11 @@
+*~
+ChangeLog
+Makefile.in
+configure
+COPYING
+INSTALL
+aclocal.m4
+autom4te.cache
+install-sh
+missing
+test-driver
