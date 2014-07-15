@@ -1,0 +1,4 @@
+#!@SHELL@
+# -*- shell-script -*-
+
+"@PYTHON@" -m gmb.gmbdapp

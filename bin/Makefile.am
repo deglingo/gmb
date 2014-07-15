@@ -1,3 +1,3 @@
 #
 
-bin_SCRIPTS = gmb
+bin_SCRIPTS = gmbd gmb

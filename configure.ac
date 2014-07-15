@@ -39,6 +39,7 @@ NOSE2="`which nose2-3`"
 
 m4_define([gmb_modules], [ \
   __init__ \
+  gmbdapp \
   gmbapp \
 ])
 
@@ -60,6 +61,7 @@ AC_CONFIG_FILES([ \
   test/Makefile \
 ])
 AC_CONFIG_FILES([pycc], [chmod +x pycc])
+AC_CONFIG_FILES([bin/gmbd], [chmod +x bin/gmbd])
 AC_CONFIG_FILES([bin/gmb], [chmod +x bin/gmb])
 AC_CONFIG_FILES([test/gmb-test], [chmod +x test/gmb-test])
 AC_OUTPUT
