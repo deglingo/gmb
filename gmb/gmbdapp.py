@@ -91,7 +91,7 @@ class Server :
         unpickler = pickle.Unpickler(f)
         while True :
             obj = unpickler.load()
-            print('OBJ: %s' % repr(obj))
+            self.event_queue.put(('message', cli.clid, obj))
 
 
     # __client_write_T:
@@ -153,7 +153,14 @@ class GmbdApp :
     def __main_T (self) :
         while True :
             event = self.event_queue.get()
-            print('event: %s' % repr(event))
+            trace('event: %s' % repr(event))
+            key = event[0]
+            if key == 'connect' :
+                trace('connect: %s' % repr(event[1:]))
+            elif key == 'message' :
+                trace('message: %s' % repr(event[1:]))
+            else :
+                trace('FIXME: unhandled event: %s' % repr(event[1:]))
 
 
 # exec

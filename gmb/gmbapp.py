@@ -67,7 +67,7 @@ class GmbApp :
         fout = s.makefile('wb')
         fin = s.makefile('rb')
         # send
-        msg = ('command', 'arg1', 'arg2')
+        msg = ('command', 'install', '.*')
         pickle.dump(msg, fout)
         fout.flush()
         fout.close()
