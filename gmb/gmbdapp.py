@@ -2,6 +2,8 @@
 
 import sys, queue, socket, signal, threading, pickle, time
 
+from gmb.base import *
+
 
 # IDCounter:
 #
@@ -116,7 +118,8 @@ class GmbdApp :
     #
     def run (self) :
         try:
-            print('gmbd: hello')
+            self.__setup_logger()
+            trace('hello')
             self.event_queue = queue.Queue()
             self.main_thread = threading.Thread(target=self.__main_T)
             self.server = Server(event_queue=self.event_queue)
@@ -126,6 +129,12 @@ class GmbdApp :
         finally:
             sys.stdout.flush()
             sys.stderr.flush()
+
+
+    # __setup_logger:
+    #
+    def __setup_logger (self) :
+        log_setup('gmbd')
 
 
     # __main_T:

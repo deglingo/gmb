@@ -39,6 +39,7 @@ NOSE2="`which nose2-3`"
 
 m4_define([gmb_modules], [ \
   __init__ \
+  base \
   gmbdapp \
   gmbapp \
 ])
