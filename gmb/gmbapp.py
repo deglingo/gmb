@@ -1,8 +1,19 @@
 #
 
-import socket, time, pickle
+import sys, getopt, socket, time, pickle
 
 from gmb.base import *
+
+
+# USAGE:
+#
+USAGE = """\
+USAGE: gmb [OPTIONS] [COMMAND] [ITEM...]
+
+OPTIONS:
+
+  -h, --help    print this message and exit
+"""
 
 
 # GmbApp:
@@ -23,6 +34,18 @@ class GmbApp :
     def run (self) :
         log_setup('gmb')
         trace('hello')
+        # parse the command line
+        trace('args: %s' % repr(sys.argv))
+        shortopts = 'h'
+        longopts = ['help']
+        opts, args = getopt.gnu_getopt(sys.argv[1:], shortopts, longopts)
+        for o, a in opts :
+            if o in ('-h', '--help') :
+                sys.stderr.write(USAGE)
+                sys.exit(0)
+            else :
+                assert 0, (o, a)
+        # run
         host = 'localhost'
         port = 5555
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

@@ -1,4 +1,4 @@
 #!@SHELL@
 # -*- shell-script -*-
 
-"@PYTHON@" -m gmb.gmbapp
+"@PYTHON@" -m gmb.gmbapp "${@}"
