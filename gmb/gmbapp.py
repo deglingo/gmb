@@ -2,6 +2,8 @@
 
 import socket, time, pickle
 
+from gmb.base import *
+
 
 # GmbApp:
 #
@@ -19,7 +21,8 @@ class GmbApp :
     # run:
     #
     def run (self) :
-        print('gmb: hello')
+        log_setup('gmb')
+        trace('hello')
         host = 'localhost'
         port = 5555
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
