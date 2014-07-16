@@ -1,6 +1,6 @@
 #
 
-import socket, time
+import socket, time, pickle
 
 
 # GmbApp:
@@ -34,11 +34,19 @@ class GmbApp :
                     print('connection refused, retry...')
                     time.sleep(0.1)
             break
-        s.sendall(b'Hello, world')
-        data = s.recv(1024)
-        s.close()
-        print('Received', repr(data))
-
+        print('connected!')
+        fout = s.makefile('wb')
+        fin = s.makefile('rb')
+        # send
+        msg = ('command', 'arg1', 'arg2')
+        pickle.dump(msg, fout)
+        fout.flush()
+        fout.close()
+        # recv
+        while True :
+            obj = pickle.load(fin)
+            print('MSG: %s' % repr(obj))
+        assert 0, "bye"
 
 # exec
 if __name__ == '__main__' :
