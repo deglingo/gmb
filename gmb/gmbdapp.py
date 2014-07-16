@@ -1,6 +1,6 @@
 #
 
-import sys, queue, socket, signal, threading, pickle, time
+import sys, getopt, queue, socket, signal, threading, pickle, time
 
 from gmb.base import *
 
@@ -55,17 +55,17 @@ class Server :
 
     # __init__:
     #
-    def __init__ (self, event_queue) :
+    def __init__ (self, port, event_queue) :
         self.event_queue = event_queue
         self.host = ''
-        self.port = 5555
+        self.port = port
         self.clid_counter = IDCounter()
 
         
     # start:
     #
     def start (self) :
-        print('starting server...')
+        print('starting server on port %d ...' % self.port)
         self.listen_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.listen_sock.bind((self.host, self.port))
         self.listen_sock.listen(1)
@@ -120,9 +120,20 @@ class GmbdApp :
         try:
             self.__setup_logger()
             trace('hello')
+            # parse command line
+            shortopts = 'p:'
+            longopts = ['port=']
+            opts, args = getopt.gnu_getopt(sys.argv[1:], shortopts, longopts)
+            port = 5555
+            for o, a in opts :
+                if o in ('-p', '--port') :
+                    port = int(a)
+                else :
+                    assert 0, (o, a)
+            #
             self.event_queue = queue.Queue()
             self.main_thread = threading.Thread(target=self.__main_T)
-            self.server = Server(event_queue=self.event_queue)
+            self.server = Server(port=port, event_queue=self.event_queue)
             self.main_thread.start()
             self.server.start()
             signal.pause()

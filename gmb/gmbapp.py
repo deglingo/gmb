@@ -36,18 +36,21 @@ class GmbApp :
         trace('hello')
         # parse the command line
         trace('args: %s' % repr(sys.argv))
-        shortopts = 'h'
-        longopts = ['help']
+        port = 5555
+        shortopts = 'p:h'
+        longopts = ['port=', 'help']
         opts, args = getopt.gnu_getopt(sys.argv[1:], shortopts, longopts)
         for o, a in opts :
             if o in ('-h', '--help') :
                 sys.stderr.write(USAGE)
                 sys.exit(0)
+            elif o in ('-p', '--port') :
+                port = int(a)
             else :
                 assert 0, (o, a)
         # run
         host = 'localhost'
-        port = 5555
+        trace('connecting to %s:%d' % (host, port))
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         ntries = 0
         while True :
