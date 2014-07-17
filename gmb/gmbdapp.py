@@ -101,6 +101,24 @@ class Server :
             time.sleep(1)
 
 
+# Scheduler:
+#
+class Scheduler :
+
+
+    # start:
+    #
+    def start (self) :
+        self.thread = threading.Thread(target=self.__run_T)
+        self.thread.start()
+
+
+    # __run_T:
+    #
+    def __run_T (self) :
+        trace("scheduler: run")
+
+
 # GmbdApp:
 #
 class GmbdApp :
@@ -134,8 +152,10 @@ class GmbdApp :
             self.event_queue = queue.Queue()
             self.main_thread = threading.Thread(target=self.__main_T)
             self.server = Server(port=port, event_queue=self.event_queue)
+            self.scheduler = Scheduler()
             self.main_thread.start()
             self.server.start()
+            self.scheduler.start()
             signal.pause()
         finally:
             sys.stdout.flush()
