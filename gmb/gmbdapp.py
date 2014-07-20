@@ -3,6 +3,7 @@
 import sys, getopt, queue, socket, signal, threading, pickle, time
 
 from gmb.base import *
+from gmb.sysconf import SYSCONF
 
 
 # IDCounter:
@@ -136,6 +137,7 @@ class GmbdApp :
     #
     def run (self) :
         try:
+            assert 0, SYSCONF
             self.__setup_logger()
             trace('hello')
             # parse command line

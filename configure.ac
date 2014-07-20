@@ -1,6 +1,8 @@
 AC_INIT([gmb], [0.0.0])
 AM_INIT_AUTOMAKE
 
+AC_SUBST([pkgsysconfdir], '${sysconfdir}/${PACKAGE}')
+
 AC_PROG_LN_S
 
 # check for python3
@@ -40,6 +42,7 @@ NOSE2="`which nose2-3`"
 m4_define([gmb_modules], [ \
   __init__ \
   base \
+  sysconf \
   gmbdapp \
   gmbapp \
 ])
