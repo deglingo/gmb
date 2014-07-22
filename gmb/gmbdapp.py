@@ -1,6 +1,6 @@
 #
 
-import sys, getopt, queue, socket, signal, threading, pickle, time
+import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time
 
 from gmb.base import *
 from gmb.sysconf import SYSCONF
@@ -25,6 +25,17 @@ class IDCounter :
             self.counter += 1
             c = self.counter
         return c
+
+
+# Config:
+#
+class Config :
+
+
+    # __init__:
+    #
+    def __init__ (self) :
+        self.pkglistdir = os.path.join(SYSCONF['pkgsysconfdir'], 'packages.d')
 
 
 # Client:
@@ -137,9 +148,11 @@ class GmbdApp :
     #
     def run (self) :
         try:
-            assert 0, SYSCONF
+            # setup the logger
             self.__setup_logger()
             trace('hello')
+            # create the config
+            self.__init_config()
             # parse command line
             shortopts = 'p:'
             longopts = ['port=']
@@ -162,6 +175,13 @@ class GmbdApp :
         finally:
             sys.stdout.flush()
             sys.stderr.flush()
+
+
+    # __init_config:
+    #
+    def __init_config (self) :
+        self.config = Config()
+        trace("reading packages list from '%s'" % self.config.pkglistdir)
 
 
     # __setup_logger:
