@@ -43,7 +43,9 @@ class Config :
     def __init__ (self) :
         self.pkglistdir = os.path.join(SYSCONF['pkgsysconfdir'], 'packages.d')
         self.packages = {}
-
+        # [fixme]
+        t = CfgTarget(name='home', prefix=os.path.join(os.environ['HOME'], 'local'))
+        self.targets = {'home': t}
 
     # list_packages:
     #
@@ -63,6 +65,18 @@ class Config :
             pkg = CfgPackage(pkgname)
             self.packages[pkgname] = pkg
         trace("found %d packages" % len(self.packages))
+
+
+# CfgTarget:
+#
+class CfgTarget :
+
+
+    # __init__:
+    #
+    def __init__ (self, name, prefix) :
+        self.name = name
+        self.prefix = prefix
 
 
 # CfgPackage:
