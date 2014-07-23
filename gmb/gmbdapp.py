@@ -1,6 +1,6 @@
 #
 
-import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time
+import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess
 
 from gmb.base import *
 from gmb.sysconf import SYSCONF
@@ -10,6 +10,20 @@ from gmb.sysconf import SYSCONF
 #
 def gmbrepr (obj, descr) :
     return '<%s %s>' % (obj.__class__.__name__, descr)
+
+
+# gmbexec:
+#
+def gmbexec (cmd, **kwargs) :
+    cwd = kwargs.pop('cwd', None)
+    if cwd is None :
+        cwd = os.getcwd()
+    prompt = '%s>' % cwd # [todo] user@hostname
+    # [fixme] quote cmd
+    trace("%s %s" % (cwd, ' '.join(cmd)))
+    proc = subprocess.Popen(cmd, cwd=cwd, **kwargs)
+    r = proc.wait()
+    assert r == 0, r
 
 
 # IDCounter:
@@ -114,6 +128,8 @@ class CfgSource :
     def __init__ (self, package) :
         self.package = package
         # [fixme]
+        self.srcdir = os.path.join('/src', package.name)
+        # [fixme]
         self.bhv_bootstrap = BhvBootstrapGNU()
 
 
@@ -176,7 +192,9 @@ class BhvBootstrapGNU (BhvBootstrap) :
     # run:
     #
     def run (self, cmd, item) :
-        trace("[TODO] bootstrap source %s" % item)
+        trace("bootstrapping source %s" % item)
+        cmd = ['sh', './autogen']
+        gmbexec(cmd, cwd=item.srcdir)
 
 
 # BhvConfigureGNU:
