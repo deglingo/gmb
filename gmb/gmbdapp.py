@@ -321,13 +321,18 @@ class BhvBuildGNU (BhvBuild) :
     # check_run:
     #
     def check_run (self, cmd, item) :
-        return True
+        state, stamp = item.get_state('build', 'clean')
+        if state != 'done' :
+            return True
+        else :
+            return False
 
 
     # run:
     #
     def run (self, cmd, item) :
-        trace("[TODO] build build %s" % item)    
+        gmbexec(['make'], cwd=item.builddir)
+        item.set_state('build', 'done')
 
 
 # BhvInstallGNU:
