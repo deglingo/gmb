@@ -145,10 +145,39 @@ class Server :
             time.sleep(1)
 
 
+# Command:
+#
+class Command :
+    pass
+
+
+# CmdInstall:
+#
+class CmdInstall (Command) :
+    pass
+
+
 # TaskPool:
 #
 class TaskPool :
-    pass
+
+
+    # __init__:
+    #
+    def __init__ (self) :
+        self.tasks = []
+
+
+# Task:
+#
+class Task :
+
+
+    # __init__:
+    #
+    def __init__ (self, cmd, item) :
+        self.cmd = cmd
+        self.item = item
 
 
 # Scheduler:
@@ -173,14 +202,16 @@ class Scheduler :
     #
     def schedule_command (self, cmd, items) :
         pool = TaskPool()
+        cmdcls = CmdInstall # [FIXME]
         for i in items :
-            self.__schedule_task(pool, cmd, i)
+            cmdobj = cmdcls()
+            self.__schedule_task(pool, cmdobj, i)
 
 
     # __schedule_task:
     #
     def __schedule_task (self, pool, cmd, item) :
-        pass
+        pool.tasks.append(Task(cmd, item))
 
 
 # GmbdApp:
