@@ -240,12 +240,19 @@ class TaskPool :
 class Task :
 
 
+    # states
+    S_WAIT = 0
+    S_RUN = 1
+    S_SUCCESS = 2
+
+
     # __init__:
     #
     def __init__ (self, cmd, item, auto) :
         self.cmd = cmd
         self.item = item
         self.auto = auto
+        self.state = Task.S_WAIT
 
 
     # __repr__:
@@ -288,6 +295,8 @@ class Scheduler :
         # process all pending tasks
         for task, status, exc_info in self.pending_tasks :
             trace("task terminated: %s (%s)" % (task, status))
+            assert task.state == Task.S_RUN
+            task.state = Task.S_SUCCESS
             self.current_pool.t_run.remove(task)
             self.current_pool.t_done.append(task)
         self.pending_tasks = []
@@ -318,6 +327,8 @@ class Scheduler :
     #
     def __start_task (self, pool, task) :
         trace("starting task: %s" % task)
+        assert task.state == Task.S_WAIT
+        task.state = Task.S_RUN
         pool.t_wait.remove(task)
         pool.t_run.append(task)
         task_thread = threading.Thread(target=self.__run_task, args=(task,))
