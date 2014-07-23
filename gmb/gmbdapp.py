@@ -43,6 +43,7 @@ class Config :
     def __init__ (self) :
         self.pkglistdir = os.path.join(SYSCONF['pkgsysconfdir'], 'packages.d')
         self.packages = {}
+        self.builds = {} # map <(target, pkg), build>
         # [fixme]
         t = CfgTarget(name='home', prefix=os.path.join(os.environ['HOME'], 'local'))
         self.targets = {'home': t}
@@ -51,6 +52,16 @@ class Config :
     #
     def list_packages (self) :
         return list(self.packages.values())
+
+
+    # get_build:
+    #
+    def get_build (self, target, package) :
+        key = (target.name, package.name)
+        build = self.builds.get(key)
+        if build is None :
+            build = self.builds[key] = CfgBuild(target, package)
+        return build
 
 
     # read_packages:
@@ -88,6 +99,21 @@ class CfgPackage :
     #
     def __init__ (self, name) :
         self.name = name
+
+
+# CfgBuild:
+#
+class CfgBuild :
+
+
+    name = property(lambda s: '%s:%s' % (s.target.name, s.package.name))
+
+    
+    # __init__:
+    #
+    def __init__ (self, target, package) :
+        self.target = target
+        self.package = package
 
 
 # Client:
@@ -468,8 +494,10 @@ class GmbdApp :
                 trace('connect: %s' % repr(event[1:]))
             elif key == 'message' :
                 trace('message: %s' % repr(event[1:]))
+                target = self.config.targets['home']
                 pkgs = self.config.list_packages()
-                self.scheduler.schedule_command('install', pkgs)
+                builds = [self.config.get_build(target, p) for p in pkgs]
+                self.scheduler.schedule_command('install', builds)
             else :
                 trace('FIXME: unhandled event: %s' % repr(event[1:]))
 
