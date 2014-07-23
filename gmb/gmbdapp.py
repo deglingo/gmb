@@ -189,6 +189,12 @@ class BhvInstall (Behaviour) :
 class BhvBootstrapGNU (BhvBootstrap) :
 
 
+    # check_run:
+    #
+    def check_run (self, cmd, item) :
+        return True
+
+    
     # run:
     #
     def run (self, cmd, item) :
@@ -202,6 +208,12 @@ class BhvBootstrapGNU (BhvBootstrap) :
 class BhvConfigureGNU (BhvConfigure) :
 
 
+    # check_run:
+    #
+    def check_run (self, cmd, item) :
+        return True
+
+
     # run:
     #
     def run (self, cmd, item) :
@@ -213,6 +225,12 @@ class BhvConfigureGNU (BhvConfigure) :
 class BhvBuildGNU (BhvBuild) :
 
 
+    # check_run:
+    #
+    def check_run (self, cmd, item) :
+        return True
+
+
     # run:
     #
     def run (self, cmd, item) :
@@ -222,6 +240,12 @@ class BhvBuildGNU (BhvBuild) :
 # BhvInstallGNU:
 #
 class BhvInstallGNU (BhvInstall) :
+
+
+    # check_run:
+    #
+    def check_run (self, cmd, item) :
+        return True
 
 
     # run:
@@ -514,7 +538,8 @@ class Scheduler :
         trace("running task: %s" % task)
         # [TODO] run...
         bhv = task.cmd.get_behaviour(task.item)
-        bhv.run(task.cmd, task.item)
+        if bhv.check_run(task.cmd, task.item) :
+            bhv.run(task.cmd, task.item)
         with self.process_cond :
             self.pending_tasks.append((task, 0, None))
             self.process_cond.notify()
