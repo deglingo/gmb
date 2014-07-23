@@ -301,12 +301,6 @@ class BhvConfigureGNU (BhvConfigure) :
             return False
 
 
-    # check_run:
-    #
-    def check_run (self, cmd, item) :
-        return True
-
-
     # run:
     #
     def run (self, cmd, item) :
@@ -316,7 +310,7 @@ class BhvConfigureGNU (BhvConfigure) :
         configure = os.path.join(item.source.srcdir, 'configure')
         cmd = [configure, '--prefix', item.target.prefix]
         gmbexec(cmd, cwd=item.builddir)
-        item.set_state('bootstrap', 'done')
+        item.set_state('configure', 'done')
 
 
 # BhvBuildGNU:
