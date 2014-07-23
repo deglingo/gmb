@@ -157,11 +157,44 @@ class Command :
     pass
 
 
+# CmdBootstrap:
+#
+class CmdBootstrap (Command) :
+
+    cmdname = 'bootstrap' # [fixme]
+
+    def get_depends (self, item) :
+        return ()
+
+
+# CmdConfigure:
+#
+class CmdConfigure (Command) :
+
+    cmdname = 'configure' # [fixme]
+
+    def get_depends (self, item) :
+        return ((CmdBootstrap(), item),)
+
+    
+# CmdBuild:
+#
+class CmdBuild (Command) :
+
+    cmdname = 'build' # [fixme]
+
+    def get_depends (self, item) :
+        return ((CmdConfigure(), item),)
+
+
 # CmdInstall:
 #
 class CmdInstall (Command) :
 
     cmdname = 'install' # [fixme]
+
+    def get_depends (self, item) :
+        return ((CmdBuild(), item),)
 
 
 # TaskPool:
@@ -183,11 +216,21 @@ class TaskPool :
         self.t_done = []
 
 
+    # find_task:
+    #
+    def find_task (self, cmd, item) :
+        # [fixme]
+        for task in self.tasks :
+            if task.cmd.__class__ is cmd.__class__ and task.item is item :
+                return task
+        return None
+
+
     # get_next_task:
     #
     def get_next_task (self) :
-        if self.tasks :
-            return self.tasks[0]
+        if self.t_wait :
+            return self.t_wait[0]
         else :
             return None
 
@@ -199,9 +242,10 @@ class Task :
 
     # __init__:
     #
-    def __init__ (self, cmd, item) :
+    def __init__ (self, cmd, item, auto) :
         self.cmd = cmd
         self.item = item
+        self.auto = auto
 
 
     # __repr__:
@@ -297,7 +341,7 @@ class Scheduler :
         cmdcls = CmdInstall # [FIXME]
         for i in items :
             cmdobj = cmdcls()
-            self.__schedule_task(pool, cmdobj, i)
+            self.__schedule_task(pool, cmdobj, i, auto=False)
         with self.process_cond :
             self.task_pools.append(pool)
             self.process_cond.notify()
@@ -305,8 +349,18 @@ class Scheduler :
 
     # __schedule_task:
     #
-    def __schedule_task (self, pool, cmd, item) :
-        pool.tasks.append(Task(cmd, item))
+    def __schedule_task (self, pool, cmd, item, auto) :
+        task = pool.find_task(cmd, item)
+        # already have this task, stop here
+        if task is not None :
+            if not auto :
+                task.auto = False
+            return
+        # create a new task object
+        task = Task(cmd, item, auto)
+        pool.tasks.append(task)
+        for dep_cmd, dep_item in cmd.get_depends(item) :
+            self.__schedule_task(pool, dep_cmd, dep_item, auto=True)
 
 
 # GmbdApp:
