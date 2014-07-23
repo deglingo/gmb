@@ -115,9 +115,26 @@ class CfgPackage :
         self.name = name
 
 
+# CfgItem:
+#
+class CfgItem :
+
+
+    # get_state:
+    #
+    def get_state (self, key, defo='unset') :
+        return defo, 0
+
+
+    # set_state:
+    #
+    def set_state (self, key, state, stamp=None) :
+        pass # [TODO]
+
+
 # CfgSource:
 #
-class CfgSource :
+class CfgSource (CfgItem) :
 
 
     name = property(lambda s: 'src:%s' % s.package.name)
@@ -192,7 +209,11 @@ class BhvBootstrapGNU (BhvBootstrap) :
     # check_run:
     #
     def check_run (self, cmd, item) :
-        return True
+        state, stamp = item.get_state('bootstrap', 'clean')
+        if state != 'done' :
+            return True
+        else :
+            return False
 
     
     # run:
@@ -201,6 +222,7 @@ class BhvBootstrapGNU (BhvBootstrap) :
         trace("bootstrapping source %s" % item)
         cmd = ['sh', './autogen']
         gmbexec(cmd, cwd=item.srcdir)
+        item.set_state('bootstrap', 'done')
 
 
 # BhvConfigureGNU:
