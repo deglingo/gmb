@@ -113,6 +113,8 @@ class CfgSource :
     #
     def __init__ (self, package) :
         self.package = package
+        # [fixme]
+        self.bhv_bootstrap = BhvBootstrapGNU()
 
 
 # CfgBuild:
@@ -130,6 +132,84 @@ class CfgBuild :
         self.package = package
         # [fixme]
         self.source = CfgSource(package)
+        # [fixme]
+        self.bhv_configure = BhvConfigureGNU()
+        self.bhv_build = BhvBuildGNU()
+        self.bhv_install = BhvInstallGNU()
+
+
+# Behaviour:
+#
+class Behaviour :
+    pass
+
+
+# BhvBootstrap:
+#
+class BhvBootstrap (Behaviour) :
+    pass
+
+
+# BhvConfigure:
+#
+class BhvConfigure (Behaviour) :
+    pass
+
+
+# BhvBuild:
+#
+class BhvBuild (Behaviour) :
+    pass
+
+
+# BhvInstall:
+#
+class BhvInstall (Behaviour) :
+    pass
+
+
+# BhvBootstrapGNU:
+#
+class BhvBootstrapGNU (BhvBootstrap) :
+
+
+    # run:
+    #
+    def run (self, cmd, item) :
+        trace("[TODO] bootstrap source %s" % item)
+
+
+# BhvConfigureGNU:
+#
+class BhvConfigureGNU (BhvConfigure) :
+
+
+    # run:
+    #
+    def run (self, cmd, item) :
+        trace("[TODO] configure build %s" % item)    
+
+
+# BhvBuildGNU:
+#
+class BhvBuildGNU (BhvBuild) :
+
+
+    # run:
+    #
+    def run (self, cmd, item) :
+        trace("[TODO] build build %s" % item)    
+
+
+# BhvInstallGNU:
+#
+class BhvInstallGNU (BhvInstall) :
+
+
+    # run:
+    #
+    def run (self, cmd, item) :
+        trace("[TODO] install build %s" % item)    
 
 
 # Client:
@@ -235,6 +315,9 @@ class CmdConfigure (Command) :
     def get_depends (self, item) :
         return ((CmdBootstrap(), item.source),)
 
+    def get_behaviour (self, item) :
+        return item.bhv_configure
+
     
 # CmdBuild:
 #
@@ -245,6 +328,9 @@ class CmdBuild (Command) :
     def get_depends (self, item) :
         return ((CmdConfigure(), item),)
 
+    def get_behaviour (self, item) :
+        return item.bhv_build
+
 
 # CmdInstall:
 #
@@ -254,6 +340,9 @@ class CmdInstall (Command) :
 
     def get_depends (self, item) :
         return ((CmdBuild(), item),)
+
+    def get_behaviour (self, item) :
+        return item.bhv_install
 
 
 # TaskPool:
@@ -406,8 +495,8 @@ class Scheduler :
     def __run_task (self, task) :
         trace("running task: %s" % task)
         # [TODO] run...
-        # bhv = task.cmd.get_behaviour(task.item)
-        # bhv.run(task.item)
+        bhv = task.cmd.get_behaviour(task.item)
+        bhv.run(task.cmd, task.item)
         with self.process_cond :
             self.pending_tasks.append((task, 0, None))
             self.process_cond.notify()
