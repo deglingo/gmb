@@ -343,13 +343,19 @@ class BhvInstallGNU (BhvInstall) :
     # check_run:
     #
     def check_run (self, cmd, item) :
-        return True
+        state, stamp = item.get_state('install', 'clean')
+        if state != 'done' :
+            return True
+        else :
+            return False
 
 
     # run:
     #
     def run (self, cmd, item) :
-        trace("[TODO] install build %s" % item)    
+        trace("install %s" % item)    
+        gmbexec(['make', 'install'], cwd=item.builddir)
+        item.set_state('install', 'done')
 
 
 # Client:
