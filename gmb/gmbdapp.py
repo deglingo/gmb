@@ -1,6 +1,6 @@
 #
 
-import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess
+import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess, json
 
 from gmb.base import *
 from gmb.sysconf import SYSCONF
@@ -127,7 +127,12 @@ class DBFile :
     # __init__:
     #
     def __init__ (self, fname) :
-        pass
+        self.fname = fname
+        try:
+            with open(self.fname, 'r') as f :
+                self.data = json.load(f)
+        except FileNotFoundError:
+            self.data = {}
 
 
     # close:
@@ -139,13 +144,24 @@ class DBFile :
     # select:
     #
     def select (self, key, defo) :
-        return defo, 0
+        rec = self.data.get(key)
+        if rec is None :
+            return defo, 0
+        else :
+            return rec
 
 
     # insert:
     #
     def insert (self, key, value, stamp) :
-        pass
+        if stamp is None :
+            stamp = time.time()
+        self.data[key] = (value, stamp)
+        # write
+        tmpfile = self.fname + '.tmp'
+        with open(tmpfile, 'w') as f :
+            json.dump(self.data, f)
+        os.rename(tmpfile, self.fname)
 
 
 # CfgItem:
