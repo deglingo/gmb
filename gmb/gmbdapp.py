@@ -38,6 +38,32 @@ class Config :
         self.pkglistdir = os.path.join(SYSCONF['pkgsysconfdir'], 'packages.d')
 
 
+    # read_packages:
+    #
+    def read_packages (self) :
+        trace("reading packages in '%s'" % self.pkglistdir)
+        pkglist = glob.glob(os.path.join(self.pkglistdir, '*.pkg'))
+        self.packages = {}
+        for fname in pkglist :
+            pkgname = os.path.splitext(os.path.basename(fname))[0]
+            trace(" - '%s'" % pkgname)
+            assert pkgname not in self.packages, pkgname
+            pkg = CfgPackage(pkgname)
+            self.packages[pkgname] = pkg
+        trace("found %d packages" % len(self.packages))
+
+
+# CfgPackage:
+#
+class CfgPackage :
+
+
+    # __init__:
+    #
+    def __init__ (self, name) :
+        self.name = name
+
+
 # Client:
 #
 class Client :
@@ -182,6 +208,7 @@ class GmbdApp :
     def __init_config (self) :
         self.config = Config()
         trace("reading packages list from '%s'" % self.config.pkglistdir)
+        self.config.read_packages()
 
 
     # __setup_logger:
