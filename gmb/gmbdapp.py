@@ -6,6 +6,12 @@ from gmb.base import *
 from gmb.sysconf import SYSCONF
 
 
+# gmbrepr:
+#
+def gmbrepr (obj, descr) :
+    return '<%s %s>' % (obj.__class__.__name__, descr)
+
+
 # IDCounter:
 #
 class IDCounter :
@@ -154,7 +160,8 @@ class Command :
 # CmdInstall:
 #
 class CmdInstall (Command) :
-    pass
+
+    cmdname = 'install' # [fixme]
 
 
 # TaskPool:
@@ -195,6 +202,12 @@ class Task :
     def __init__ (self, cmd, item) :
         self.cmd = cmd
         self.item = item
+
+
+    # __repr__:
+    #
+    def __repr__ (self) :
+        return gmbrepr(self, "%s:%s" % (self.cmd.cmdname, self.item.name))
 
 
 # Scheduler:
