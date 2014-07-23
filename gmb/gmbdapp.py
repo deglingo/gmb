@@ -234,6 +234,11 @@ class Scheduler :
             self.current_pool.t_run.remove(task)
             self.current_pool.t_done.append(task)
         self.pending_tasks = []
+        # check if the current pool has anything left to do
+        if self.current_pool is not None :
+            if not (self.current_pool.t_wait or self.current_pool.t_run) :
+                trace("task pool finished: %s" % self.current_pool)
+                self.current_pool = None
         # if no pool is currently at work, start the first one
         if self.current_pool is None :
             if self.task_pools :
@@ -243,12 +248,13 @@ class Scheduler :
             else :
                 trace("all task pools finished")
         # try to start the next task(s)
-        while self.current_pool.t_wait and len(self.current_pool.t_run) < self.max_jobs :
-            task = self.current_pool.get_next_task()
-            if task is None :
-                assert self.current_pool.t_run # !!
-                break
-            self.__start_task(self.current_pool, task)
+        if self.current_pool is not None :
+            while self.current_pool.t_wait and len(self.current_pool.t_run) < self.max_jobs :
+                task = self.current_pool.get_next_task()
+                if task is None :
+                    assert self.current_pool.t_run # !!
+                    break
+                self.__start_task(self.current_pool, task)
 
 
     # __start_task:
