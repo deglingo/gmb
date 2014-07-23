@@ -1,6 +1,6 @@
 #
 
-import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess, json
+import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess, json, stat
 
 from gmb.base import *
 from gmb.sysconf import SYSCONF
@@ -321,12 +321,32 @@ class BhvBuildGNU (BhvBuild) :
     # check_run:
     #
     def check_run (self, cmd, item) :
+        # check state
         state, stamp = item.get_state('build', 'clean')
         if state != 'done' :
             return True
-        else :
-            return False
+        # check sources modifications
+        if self.__check_sources(stamp, item.source.srcdir) :
+            return True
+        return False
 
+    def __check_sources (self, stamp, path) :
+        st = os.stat(path)
+        m = st.st_mode
+        if stat.S_ISDIR(m) :
+            for child in os.listdir(path) :
+                if self.__check_sources(stamp, os.path.join(path, child)) :
+                    return True
+            return False
+        elif stat.S_ISREG(m) :
+            if st.st_mtime > stamp :
+                trace('file modified: %s' % path)
+                return True
+            else :
+                return False
+        else :
+            assert 0, path
+        
 
     # run:
     #
