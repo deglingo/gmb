@@ -213,19 +213,19 @@ class CfgSource (CfgItem) :
 
 # CfgBuild:
 #
-class CfgBuild :
+class CfgBuild (CfgItem) :
 
 
-    name = property(lambda s: '%s:%s' % (s.target.name, s.package.name))
-
-    
     # __init__:
     #
     def __init__ (self, config, target, package) :
+        CfgItem.__init__(self, config, package.name)
         self.target = target
         self.package = package
         # [fixme]
         self.source = CfgSource(config, package)
+        # [fixme]
+        self.builddir = os.path.join('/build', package.name)
         # [fixme]
         self.bhv_configure = BhvConfigureGNU()
         self.bhv_build = BhvBuildGNU()
@@ -294,13 +294,29 @@ class BhvConfigureGNU (BhvConfigure) :
     # check_run:
     #
     def check_run (self, cmd, item) :
+        state, stamp = item.get_state('configure', 'clean')
+        if state != 'done' :
+            return True
+        else :
+            return False
+
+
+    # check_run:
+    #
+    def check_run (self, cmd, item) :
         return True
 
 
     # run:
     #
     def run (self, cmd, item) :
-        trace("[TODO] configure build %s" % item)    
+        trace("configure build %s" % item)
+        try: os.mkdir(item.builddir)
+        except FileExistsError: pass
+        configure = os.path.join(item.source.srcdir, 'configure')
+        cmd = [configure, '--prefix', item.target.prefix]
+        gmbexec(cmd, cwd=item.builddir)
+        item.set_state('bootstrap', 'done')
 
 
 # BhvBuildGNU:
