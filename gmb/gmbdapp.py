@@ -168,6 +168,12 @@ class TaskPool :
         self.tasks = []
 
 
+    # start:
+    #
+    def start (self) :
+        pass
+
+
 # Task:
 #
 class Task :
@@ -188,7 +194,9 @@ class Scheduler :
     # start:
     #
     def start (self) :
+        self.max_jobs = 2 # [fixme]
         self.task_pools = []
+        self.current_pool = None
         self.process_cond = threading.Condition()
         self.thread = threading.Thread(target=self.__run_T)
         self.thread.start()
@@ -208,10 +216,17 @@ class Scheduler :
     #
     def __process (self) :
         trace("scheduler: process")
-        pool = self.task_pools.pop()
-        trace("pool: %s" % pool)
+        # if no pool is currently at work, start the first one
+        if self.current_pool is None :
+            if self.task_pools :
+                self.current_pool = self.task_pools.pop(0)
+                trace("starting task pool %s" % self.current_pool)
+                self.current_pool.start()
+            else :
+                trace("all task pools finished")
+                return # ?
 
-
+                
     # schedule_command:
     #
     def schedule_command (self, cmd, items) :
