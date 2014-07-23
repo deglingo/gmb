@@ -229,10 +229,16 @@ class TaskPool :
     # get_next_task:
     #
     def get_next_task (self) :
-        if self.t_wait :
-            return self.t_wait[0]
-        else :
-            return None
+        for task in self.t_wait :
+            if self.__check_task_run(task) :
+                return task
+        return None
+
+    def __check_task_run (self, task) :
+        for dep in task.depends :
+            if dep.state in (Task.S_WAIT, Task.S_RUN) :
+                return False
+        return True
 
 
 # Task:
@@ -253,6 +259,7 @@ class Task :
         self.item = item
         self.auto = auto
         self.state = Task.S_WAIT
+        self.depends = []
 
 
     # __repr__:
@@ -366,12 +373,14 @@ class Scheduler :
         if task is not None :
             if not auto :
                 task.auto = False
-            return
+            return task
         # create a new task object
         task = Task(cmd, item, auto)
         pool.tasks.append(task)
         for dep_cmd, dep_item in cmd.get_depends(item) :
-            self.__schedule_task(pool, dep_cmd, dep_item, auto=True)
+            dep_task = self.__schedule_task(pool, dep_cmd, dep_item, auto=True)
+            task.depends.append(dep_task)
+        return task
 
 
 # GmbdApp:
