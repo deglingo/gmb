@@ -20,7 +20,7 @@ def gmbexec (cmd, **kwargs) :
         cwd = os.getcwd()
     prompt = '%s>' % cwd # [todo] user@hostname
     # [fixme] quote cmd
-    trace("%s %s" % (cwd, ' '.join(cmd)))
+    trace("%s %s" % (prompt, ' '.join(cmd)))
     proc = subprocess.Popen(cmd, cwd=cwd, **kwargs)
     r = proc.wait()
     assert r == 0, r
