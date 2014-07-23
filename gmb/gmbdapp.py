@@ -59,6 +59,10 @@ class Config :
         self.packages = {}
         self.builds = {} # map <(target, pkg), build>
         # [fixme]
+        self.dbdir = '/tmp/gmbdb'
+        try: os.mkdir(self.dbdir)
+        except FileExistsError: pass
+        # [fixme]
         t = CfgTarget(name='home', prefix=os.path.join(os.environ['HOME'], 'local'))
         self.targets = {'home': t}
 
@@ -74,7 +78,7 @@ class Config :
         key = (target.name, package.name)
         build = self.builds.get(key)
         if build is None :
-            build = self.builds[key] = CfgBuild(target, package)
+            build = self.builds[key] = CfgBuild(self, target, package)
         return build
 
 
@@ -115,21 +119,64 @@ class CfgPackage :
         self.name = name
 
 
+# DBFile:
+#
+class DBFile :
+
+
+    # __init__:
+    #
+    def __init__ (self, fname) :
+        pass
+
+
+    # close:
+    #
+    def close (self) :
+        pass
+
+
+    # select:
+    #
+    def select (self, key, defo) :
+        return defo, 0
+
+
+    # insert:
+    #
+    def insert (self, key, value, stamp) :
+        pass
+
+
 # CfgItem:
 #
 class CfgItem :
 
 
+    # __init__:
+    #
+    def __init__ (self, config, name) :
+        self.config = config # [FIXME] ref cycle
+        self.name = name
+        dbname = '%s@%s.db' % (self.__class__.__name__.lower(), name)
+        self.dbfile = os.path.join(self.config.dbdir, dbname)
+
+
     # get_state:
     #
     def get_state (self, key, defo='unset') :
-        return defo, 0
+        db = DBFile(self.dbfile)
+        state, stamp = db.select(key, defo=defo)
+        db.close()
+        return state, stamp
 
 
     # set_state:
     #
     def set_state (self, key, state, stamp=None) :
-        pass # [TODO]
+        db = DBFile(self.dbfile)
+        db.insert(key, state, stamp)
+        db.close()
 
 
 # CfgSource:
@@ -137,12 +184,10 @@ class CfgItem :
 class CfgSource (CfgItem) :
 
 
-    name = property(lambda s: 'src:%s' % s.package.name)
-
-    
     # __init__:
     #
-    def __init__ (self, package) :
+    def __init__ (self, config, package) :
+        CfgItem.__init__(self, config, package.name)
         self.package = package
         # [fixme]
         self.srcdir = os.path.join('/src', package.name)
@@ -160,11 +205,11 @@ class CfgBuild :
     
     # __init__:
     #
-    def __init__ (self, target, package) :
+    def __init__ (self, config, target, package) :
         self.target = target
         self.package = package
         # [fixme]
-        self.source = CfgSource(package)
+        self.source = CfgSource(config, package)
         # [fixme]
         self.bhv_configure = BhvConfigureGNU()
         self.bhv_build = BhvBuildGNU()
