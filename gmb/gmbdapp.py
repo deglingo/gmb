@@ -331,6 +331,7 @@ class BhvBuildGNU (BhvBuild) :
     # run:
     #
     def run (self, cmd, item) :
+        trace("build %s" % item)
         gmbexec(['make'], cwd=item.builddir)
         item.set_state('build', 'done')
 
