@@ -207,6 +207,7 @@ class Scheduler :
     def start (self) :
         self.max_jobs = 2 # [fixme]
         self.task_pools = []
+        self.pending_tasks = []
         self.current_pool = None
         self.process_cond = threading.Condition()
         self.thread = threading.Thread(target=self.__run_T)
@@ -227,6 +228,12 @@ class Scheduler :
     #
     def __process (self) :
         trace("scheduler: process")
+        # process all pending tasks
+        for task, status, exc_info in self.pending_tasks :
+            trace("task terminated: %s (%s)" % (task, status))
+            self.current_pool.t_run.remove(task)
+            self.current_pool.t_done.append(task)
+        self.pending_tasks = []
         # if no pool is currently at work, start the first one
         if self.current_pool is None :
             if self.task_pools :
@@ -258,6 +265,10 @@ class Scheduler :
     #
     def __run_task (self, task) :
         trace("running task: %s" % task)
+        # [TODO] run...
+        with self.process_cond :
+            self.pending_tasks.append((task, 0, None))
+            self.process_cond.notify()
 
                 
     # schedule_command:
