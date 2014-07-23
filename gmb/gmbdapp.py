@@ -188,6 +188,8 @@ class Scheduler :
     # start:
     #
     def start (self) :
+        self.task_pools = []
+        self.process_cond = threading.Condition()
         self.thread = threading.Thread(target=self.__run_T)
         self.thread.start()
 
@@ -196,6 +198,18 @@ class Scheduler :
     #
     def __run_T (self) :
         trace("scheduler: run")
+        while True :
+            with self.process_cond :
+                self.process_cond.wait()
+                self.__process()
+
+
+    # __process:
+    #
+    def __process (self) :
+        trace("scheduler: process")
+        pool = self.task_pools.pop()
+        trace("pool: %s" % pool)
 
 
     # schedule_command:
@@ -206,6 +220,9 @@ class Scheduler :
         for i in items :
             cmdobj = cmdcls()
             self.__schedule_task(pool, cmdobj, i)
+        with self.process_cond :
+            self.task_pools.append(pool)
+            self.process_cond.notify()
 
 
     # __schedule_task:
