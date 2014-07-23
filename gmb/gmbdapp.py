@@ -101,6 +101,20 @@ class CfgPackage :
         self.name = name
 
 
+# CfgSource:
+#
+class CfgSource :
+
+
+    name = property(lambda s: 'src:%s' % s.package.name)
+
+    
+    # __init__:
+    #
+    def __init__ (self, package) :
+        self.package = package
+
+
 # CfgBuild:
 #
 class CfgBuild :
@@ -114,6 +128,8 @@ class CfgBuild :
     def __init__ (self, target, package) :
         self.target = target
         self.package = package
+        # [fixme]
+        self.source = CfgSource(package)
 
 
 # Client:
@@ -206,6 +222,9 @@ class CmdBootstrap (Command) :
     def get_depends (self, item) :
         return ()
 
+    def get_behaviour (self, item) :
+        return item.bhv_bootstrap
+
 
 # CmdConfigure:
 #
@@ -214,7 +233,7 @@ class CmdConfigure (Command) :
     cmdname = 'configure' # [fixme]
 
     def get_depends (self, item) :
-        return ((CmdBootstrap(), item),)
+        return ((CmdBootstrap(), item.source),)
 
     
 # CmdBuild:
@@ -387,6 +406,8 @@ class Scheduler :
     def __run_task (self, task) :
         trace("running task: %s" % task)
         # [TODO] run...
+        # bhv = task.cmd.get_behaviour(task.item)
+        # bhv.run(task.item)
         with self.process_cond :
             self.pending_tasks.append((task, 0, None))
             self.process_cond.notify()
