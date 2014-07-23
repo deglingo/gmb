@@ -171,7 +171,18 @@ class TaskPool :
     # start:
     #
     def start (self) :
-        pass
+        self.t_wait = list(self.tasks)
+        self.t_run = []
+        self.t_done = []
+
+
+    # get_next_task:
+    #
+    def get_next_task (self) :
+        if self.tasks :
+            return self.tasks[0]
+        else :
+            return None
 
 
 # Task:
@@ -224,7 +235,29 @@ class Scheduler :
                 self.current_pool.start()
             else :
                 trace("all task pools finished")
-                return # ?
+        # try to start the next task(s)
+        while self.current_pool.t_wait and len(self.current_pool.t_run) < self.max_jobs :
+            task = self.current_pool.get_next_task()
+            if task is None :
+                assert self.current_pool.t_run # !!
+                break
+            self.__start_task(self.current_pool, task)
+
+
+    # __start_task:
+    #
+    def __start_task (self, pool, task) :
+        trace("starting task: %s" % task)
+        pool.t_wait.remove(task)
+        pool.t_run.append(task)
+        task_thread = threading.Thread(target=self.__run_task, args=(task,))
+        task_thread.start()
+
+
+    # __run_task:
+    #
+    def __run_task (self, task) :
+        trace("running task: %s" % task)
 
                 
     # schedule_command:
