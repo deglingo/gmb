@@ -36,6 +36,13 @@ class Config :
     #
     def __init__ (self) :
         self.pkglistdir = os.path.join(SYSCONF['pkgsysconfdir'], 'packages.d')
+        self.packages = {}
+
+
+    # list_packages:
+    #
+    def list_packages (self) :
+        return list(self.packages.values())
 
 
     # read_packages:
@@ -43,7 +50,6 @@ class Config :
     def read_packages (self) :
         trace("reading packages in '%s'" % self.pkglistdir)
         pkglist = glob.glob(os.path.join(self.pkglistdir, '*.pkg'))
-        self.packages = {}
         for fname in pkglist :
             pkgname = os.path.splitext(os.path.basename(fname))[0]
             trace(" - '%s'" % pkgname)
@@ -139,6 +145,12 @@ class Server :
             time.sleep(1)
 
 
+# TaskPool:
+#
+class TaskPool :
+    pass
+
+
 # Scheduler:
 #
 class Scheduler :
@@ -155,6 +167,20 @@ class Scheduler :
     #
     def __run_T (self) :
         trace("scheduler: run")
+
+
+    # schedule_command:
+    #
+    def schedule_command (self, cmd, items) :
+        pool = TaskPool()
+        for i in items :
+            self.__schedule_task(pool, cmd, i)
+
+
+    # __schedule_task:
+    #
+    def __schedule_task (self, pool, cmd, item) :
+        pass
 
 
 # GmbdApp:
@@ -228,6 +254,8 @@ class GmbdApp :
                 trace('connect: %s' % repr(event[1:]))
             elif key == 'message' :
                 trace('message: %s' % repr(event[1:]))
+                pkgs = self.config.list_packages()
+                self.scheduler.schedule_command('install', pkgs)
             else :
                 trace('FIXME: unhandled event: %s' % repr(event[1:]))
 
