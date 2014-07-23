@@ -758,7 +758,7 @@ class GmbdApp :
     # __setup_logger:
     #
     def __setup_logger (self) :
-        log_setup('gmbd')
+        self.logger = log_setup('gmbd')
 
 
     # __main_T:

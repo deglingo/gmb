@@ -24,6 +24,7 @@ def log_setup (domain) :
     fmt = logging.Formatter('%(name)s: %(message)s')
     hdlr.setFormatter(fmt)
     logger.addHandler(hdlr)
+    return logger
 
 
 # logging funcs
