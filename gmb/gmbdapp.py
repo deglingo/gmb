@@ -740,6 +740,16 @@ class Scheduler :
         return task
 
 
+# Session:
+#
+class Session :
+
+    idcounter = IDCounter()
+
+    def __init__ (self) :
+        self.ssid = Session.idcounter.next()
+
+
 # GmbdApp:
 #
 class GmbdApp :
@@ -772,6 +782,9 @@ class GmbdApp :
                     port = int(a)
                 else :
                     assert 0, (o, a)
+            #
+            self.sessions = {}
+            self.sessions_lock = threading.Lock()
             #
             self.event_queue = queue.Queue()
             self.main_thread = threading.Thread(target=self.__main_T)
@@ -814,6 +827,9 @@ class GmbdApp :
             key = event[0]
             if key == 'connect' :
                 trace('connect: %s' % repr(event[1:]))
+                session = Session()
+                with self.sessions_lock :
+                    self.sessions[session.ssid] = session
             elif key == 'message' :
                 trace('message: %s' % repr(event[1:]))
                 clid = event[1]
