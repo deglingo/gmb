@@ -431,6 +431,8 @@ class Server :
         self.host = ''
         self.port = port
         self.clid_counter = IDCounter()
+        self.clients = {}
+        self.clients_lock = threading.Lock()
 
         
     # start:
@@ -451,6 +453,8 @@ class Server :
             conn, addr = self.listen_sock.accept()
             print('Connected by', addr)
             client = Client(self.clid_counter.next(), conn, addr)
+            with self.clients_lock :
+                self.clients[client.clid] = client
             self.event_queue.put(('connect', client.clid))
             client.start(self.__client_read_T, self.__client_write_T)
 
