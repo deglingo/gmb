@@ -62,7 +62,7 @@ class ClientLogHandler (logging.Handler) :
     # emit:
     #
     def emit (self, rec) :
-        print("[TODO] %s" % repr(rec))
+        print("[%d] >> %s" % (rec.clid, rec.message))
 
 
 # Config:
@@ -690,7 +690,8 @@ class Scheduler :
                 
     # schedule_command:
     #
-    def schedule_command (self, cmd, items) :
+    def schedule_command (self, clid, cmd, items) :
+        trace("scheduling command (clid=%d) : %s %s" % (clid, cmd, items), extra={'clid': clid})
         pool = TaskPool()
         cmdcls = CmdInstall # [FIXME]
         for i in items :
@@ -758,6 +759,7 @@ class GmbdApp :
             self.scheduler = Scheduler()
             # add the client log handler
             hdlr = ClientLogHandler(self.server)
+            hdlr.addFilter(lambda r: getattr(r, 'clid', 0) != 0)
             self.logger.addHandler(hdlr)
             #
             self.main_thread.start()
@@ -794,10 +796,11 @@ class GmbdApp :
                 trace('connect: %s' % repr(event[1:]))
             elif key == 'message' :
                 trace('message: %s' % repr(event[1:]))
+                clid = event[1]
                 target = self.config.targets['home']
                 pkgs = self.config.list_packages()
                 builds = [self.config.get_build(target, p) for p in pkgs]
-                self.scheduler.schedule_command('install', builds)
+                self.scheduler.schedule_command(clid, 'install', builds)
             else :
                 trace('FIXME: unhandled event: %s' % repr(event[1:]))
 
