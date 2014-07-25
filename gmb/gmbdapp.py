@@ -746,8 +746,10 @@ class Session :
 
     idcounter = IDCounter()
 
-    def __init__ (self) :
+    def __init__ (self, clid) :
         self.ssid = Session.idcounter.next()
+        self.clients = set()
+        self.clients.add(clid)
 
 
 # GmbdApp:
@@ -827,9 +829,11 @@ class GmbdApp :
             key = event[0]
             if key == 'connect' :
                 trace('connect: %s' % repr(event[1:]))
-                session = Session()
+                clid = event[1]
+                session = Session(clid)
                 with self.sessions_lock :
                     self.sessions[session.ssid] = session
+                trace("session %d created for client %d" % (session.ssid, clid))
             elif key == 'message' :
                 trace('message: %s' % repr(event[1:]))
                 clid = event[1]
