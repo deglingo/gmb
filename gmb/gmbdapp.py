@@ -1,6 +1,6 @@
 #
 
-import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess, json, stat
+import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess, json, stat, logging
 
 from gmb.base import *
 from gmb.sysconf import SYSCONF
@@ -45,6 +45,24 @@ class IDCounter :
             self.counter += 1
             c = self.counter
         return c
+
+
+# ClientLogHandler:
+#
+class ClientLogHandler (logging.Handler) :
+
+
+    # __init__:
+    #
+    def __init__ (self, server) :
+        logging.Handler.__init__(self, 1)
+        self.server = server
+
+
+    # emit:
+    #
+    def emit (self, rec) :
+        print("[TODO] %s" % repr(rec))
 
 
 # Config:
@@ -738,6 +756,10 @@ class GmbdApp :
             self.main_thread = threading.Thread(target=self.__main_T)
             self.server = Server(port=port, event_queue=self.event_queue)
             self.scheduler = Scheduler()
+            # add the client log handler
+            hdlr = ClientLogHandler(self.server)
+            self.logger.addHandler(hdlr)
+            #
             self.main_thread.start()
             self.server.start()
             self.scheduler.start()
