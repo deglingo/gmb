@@ -63,6 +63,7 @@ class ClientLogHandler (logging.Handler) :
     #
     def emit (self, rec) :
         print("[%d] >> %s" % (rec.clid, rec.message))
+        self.server.send_log_record(rec.clid, rec)
 
 
 # Config:
@@ -408,6 +409,7 @@ class Client :
         self.clid = clid
         self.sock = sock
         self.addr = addr
+        self.msg_queue = queue.Queue()
 
 
     # start:
@@ -446,6 +448,16 @@ class Server :
         self.listen_thread.start()
 
 
+    # send_log_record:
+    #
+    def send_log_record (self, clid, rec) :
+        with self.clients_lock :
+            client = self.clients.get(clid)
+        if client is None :
+            return
+        client.msg_queue.put(('log', rec.message))
+
+
     # __listen_T:
     #
     def __listen_T (self) :
@@ -471,9 +483,13 @@ class Server :
 
     # __client_write_T:
     #
-    def __client_write_T (self, *args) :
+    def __client_write_T (self, cli) :
+        f = cli.sock.makefile('wb')
+        pickler = pickle.Pickler(f)
         while True :
-            time.sleep(1)
+            msg = cli.msg_queue.get()
+            pickler.dump(msg)
+            f.flush()
 
 
 # Command:
