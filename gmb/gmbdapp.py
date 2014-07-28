@@ -604,6 +604,7 @@ class Task :
     S_WAIT = 0
     S_RUN = 1
     S_SUCCESS = 2
+    S_ERROR = 3
 
 
     # __init__:
@@ -701,11 +702,17 @@ class Scheduler :
     def __run_task (self, task) :
         trace("running task: %s" % task)
         # [TODO] run...
-        bhv = task.cmd.get_behaviour(task.item)
-        if bhv.check_run(task.cmd, task.item) :
-            bhv.run(task.cmd, task.item)
+        status = Task.S_SUCCESS
+        exc_info = None
+        try:
+            bhv = task.cmd.get_behaviour(task.item)
+            if bhv.check_run(task.cmd, task.item) :
+                bhv.run(task.cmd, task.item)
+        except:
+            status = Task.S_ERROR
+            exc_info = sys.exc_info()
         with self.process_cond :
-            self.pending_tasks.append((task, 0, None))
+            self.pending_tasks.append((task, status, exc_info))
             self.process_cond.notify()
 
                 
