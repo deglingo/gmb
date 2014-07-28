@@ -710,8 +710,8 @@ class Scheduler :
                 
     # schedule_command:
     #
-    def schedule_command (self, clid, cmd, items) :
-        trace("scheduling command (clid=%d) : %s %s" % (clid, cmd, items), extra={'clid': clid})
+    def schedule_command (self, ssid, cmd, items) :
+        trace("scheduling command (ssid=%d) : %s %s" % (ssid, cmd, items), extra={'ssid': ssid})
         pool = TaskPool()
         cmdcls = CmdInstall # [FIXME]
         for i in items :
@@ -841,7 +841,7 @@ class GmbdApp :
                 target = self.config.targets['home']
                 pkgs = self.config.list_packages()
                 builds = [self.config.get_build(target, p) for p in pkgs]
-                self.scheduler.schedule_command(clid, 'install', builds)
+                self.scheduler.schedule_command(ssid, 'install', builds)
             else :
                 trace('FIXME: unhandled event: %s' % repr(event[1:]))
 
