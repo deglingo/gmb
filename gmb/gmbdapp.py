@@ -54,16 +54,16 @@ class ClientLogHandler (logging.Handler) :
 
     # __init__:
     #
-    def __init__ (self, server) :
+    def __init__ (self, broadcast) :
         logging.Handler.__init__(self, 1)
-        self.server = server
+        self.broadcast = broadcast
 
 
     # emit:
     #
     def emit (self, rec) :
-        print("[%d] >> %s" % (rec.clid, rec.message))
-        self.server.send_log_record(rec.clid, rec)
+        print("[%d] >> %s" % (rec.ssid, rec.message))
+        self.broadcast(rec.ssid, rec)
 
 
 # Config:
@@ -760,6 +760,10 @@ class SessionPool :
         self.sessions = {}      # map <ssid, Session>
         self.sessions_clid = {} # map <clid, ssid>
 
+    def list_clients (self, ssid) :
+        with self.lock :
+            return list(self.sessions[ssid].clients)
+
     def open_session (self) :
         session = Session()
         with self.lock :
@@ -816,8 +820,8 @@ class GmbdApp :
             self.server = Server(port=port, event_queue=self.event_queue)
             self.scheduler = Scheduler()
             # add the client log handler
-            hdlr = ClientLogHandler(self.server)
-            hdlr.addFilter(lambda r: getattr(r, 'clid', 0) != 0)
+            hdlr = ClientLogHandler(self.__broadcast_log)
+            hdlr.addFilter(lambda r: getattr(r, 'ssid', 0) != 0)
             self.logger.addHandler(hdlr)
             #
             self.main_thread.start()
@@ -867,6 +871,13 @@ class GmbdApp :
                 self.scheduler.schedule_command(ssid, 'install', builds)
             else :
                 trace('FIXME: unhandled event: %s' % repr(event[1:]))
+
+
+    # __broadcast_log:
+    #
+    def __broadcast_log (self, ssid, rec) :
+        for clid in self.sspool.list_clients(ssid) :
+            self.server.send_log_record(clid, rec)
 
 
 # exec
