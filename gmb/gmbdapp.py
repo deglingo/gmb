@@ -557,7 +557,8 @@ class TaskPool :
 
     # __init__:
     #
-    def __init__ (self) :
+    def __init__ (self, ssid) :
+        self.ssid = ssid
         self.tasks = []
 
 
@@ -712,7 +713,7 @@ class Scheduler :
     #
     def schedule_command (self, ssid, cmd, items) :
         trace("scheduling command (ssid=%d) : %s %s" % (ssid, cmd, items), extra={'ssid': ssid})
-        pool = TaskPool()
+        pool = TaskPool(ssid)
         cmdcls = CmdInstall # [FIXME]
         for i in items :
             cmdobj = cmdcls()
