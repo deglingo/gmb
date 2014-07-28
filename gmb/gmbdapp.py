@@ -786,6 +786,7 @@ class GmbdApp :
                     assert 0, (o, a)
             #
             self.sessions = {}
+            self.sessions_clid = {}
             self.sessions_lock = threading.Lock()
             #
             self.event_queue = queue.Queue()
@@ -830,19 +831,37 @@ class GmbdApp :
             if key == 'connect' :
                 trace('connect: %s' % repr(event[1:]))
                 clid = event[1]
-                session = Session(clid)
-                with self.sessions_lock :
-                    self.sessions[session.ssid] = session
-                trace("session %d created for client %d" % (session.ssid, clid))
+                ssid = self.__open_session(clid)
+                trace("session %d created for client %d" % (ssid, clid))
             elif key == 'message' :
                 trace('message: %s' % repr(event[1:]))
                 clid = event[1]
+                ssid = self.__get_client_session(clid)
+                assert ssid != 0, clid
                 target = self.config.targets['home']
                 pkgs = self.config.list_packages()
                 builds = [self.config.get_build(target, p) for p in pkgs]
                 self.scheduler.schedule_command(clid, 'install', builds)
             else :
                 trace('FIXME: unhandled event: %s' % repr(event[1:]))
+
+
+    # __open_session:
+    #
+    def __open_session (self, clid) :
+        session = Session(clid)
+        with self.sessions_lock :
+            self.sessions[session.ssid] = session
+            self.sessions_clid[clid] = session.ssid
+        return session.ssid
+
+
+    # __get_client_session:
+    #
+    def __get_client_session (self, clid) :
+        with self.sessions_lock :
+            ss = self.sessions.get(clid, 0)
+        return ss.ssid
 
 
 # exec
