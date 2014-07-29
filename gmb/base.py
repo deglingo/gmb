@@ -3,6 +3,7 @@
 __all__ = [
     'log_setup',
     'trace',
+    'error',
 ]
 
 import sys, logging
@@ -33,3 +34,9 @@ def trace (msg, *args, **kwargs) :
     assert LOG_DOMAIN is not None
     logger = logging.getLogger(LOG_DOMAIN)
     logger.log(logging.DEBUG, msg, *args, **kwargs)
+
+def error (msg, *args, **kwargs) :
+    assert LOG_DOMAIN is not None
+    logger = logging.getLogger(LOG_DOMAIN)
+    logger.log(logging.ERROR, msg, *args, **kwargs)
+    

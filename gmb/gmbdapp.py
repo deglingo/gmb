@@ -714,6 +714,7 @@ class Scheduler :
         except:
             status = Task.S_ERROR
             exc_info = sys.exc_info()
+            error('task %s failed' % task, exc_info=exc_info)
         with self.process_cond :
             self.pending_tasks.append((task, status, exc_info))
             self.process_cond.notify()
