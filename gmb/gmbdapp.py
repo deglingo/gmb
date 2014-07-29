@@ -1,6 +1,6 @@
 #
 
-import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess, json, stat, logging
+import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess, json, stat, logging, weakref
 
 from gmb.base import *
 from gmb.sysconf import SYSCONF
@@ -606,10 +606,13 @@ class Task :
     S_SUCCESS = 2
     S_ERROR = 3
 
+    pool = property(lambda s: s._wrpool())
+
 
     # __init__:
     #
-    def __init__ (self, cmd, item, auto) :
+    def __init__ (self, pool, cmd, item, auto) :
+        self._wrpool = weakref.ref(pool)
         self.cmd = cmd
         self.item = item
         self.auto = auto
@@ -740,7 +743,7 @@ class Scheduler :
                 task.auto = False
             return task
         # create a new task object
-        task = Task(cmd, item, auto)
+        task = Task(pool, cmd, item, auto)
         pool.tasks.append(task)
         for dep_cmd, dep_item in cmd.get_depends(item) :
             dep_task = self.__schedule_task(pool, dep_cmd, dep_item, auto=True)
