@@ -641,6 +641,7 @@ class Task :
     S_RUN = 1
     S_SUCCESS = 2
     S_ERROR = 3
+    S_CANCEL = 4
 
     pool = property(lambda s: s._wrpool())
     ssid = property(lambda s: s.pool.ssid)
@@ -696,12 +697,19 @@ class Scheduler :
     def __process (self) :
         trace("scheduler: process")
         # process all pending tasks
+        # [FIXME] lock something here ?
         for task, status, exc_info in self.pending_tasks :
             trace("task terminated: %s (%s)" % (task, status))
             assert task.state == Task.S_RUN
-            task.state = Task.S_SUCCESS
+            task.state = status
             self.current_pool.t_run.remove(task)
             self.current_pool.t_done.append(task)
+            if status == Task.S_SUCCESS :
+                assert exc_info is None, exc_info
+            elif status == Task.S_ERROR :
+                self.__cancel_rdepends(task)
+            else :
+                assert 0, status
         self.pending_tasks = []
         # check if the current pool has anything left to do
         if self.current_pool is not None :
@@ -724,6 +732,22 @@ class Scheduler :
                     assert self.current_pool.t_run # !!
                     break
                 self.__start_task(self.current_pool, task)
+
+
+    # __cancel_rdepends:
+    #
+    def __cancel_rdepends (self, task) :
+        for rdep in task.rdepends :
+            self.__cancel_task(rdep)
+
+    def __cancel_task (self, task) :
+        if task.state == Task.S_CANCEL :
+            return
+        assert task.state == Task.S_WAIT, task
+        trace("task cancelled: %s" % task, extra={'ssid': task.ssid})
+        task.state == Task.S_CANCEL
+        task.pool.t_wait.remove(task)
+        task.pool.t_done.append(task)
 
 
     # __start_task:
