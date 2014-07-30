@@ -227,7 +227,7 @@ class CfgSource (CfgItem) :
         # [fixme]
         self.srcdir = os.path.join('/src', package.name)
         # [fixme]
-        self.bhv_bootstrap = BhvBootstrapGNU()
+        self.bhv_bootstrap_cls = BhvBootstrapGNU
 
 
 # CfgBuild:
@@ -246,9 +246,9 @@ class CfgBuild (CfgItem) :
         # [fixme]
         self.builddir = os.path.join('/build', package.name)
         # [fixme]
-        self.bhv_configure = BhvConfigureGNU()
-        self.bhv_build = BhvBuildGNU()
-        self.bhv_install = BhvInstallGNU()
+        self.bhv_configure_cls = BhvConfigureGNU
+        self.bhv_build_cls = BhvBuildGNU
+        self.bhv_install_cls = BhvInstallGNU
 
 
 # Behaviour:
@@ -513,7 +513,7 @@ class CmdBootstrap (Command) :
         return ()
 
     def get_behaviour (self, item) :
-        return item.bhv_bootstrap
+        return item.bhv_bootstrap_cls()
 
 
 # CmdConfigure:
@@ -526,7 +526,7 @@ class CmdConfigure (Command) :
         return ((CmdBootstrap(), item.source),)
 
     def get_behaviour (self, item) :
-        return item.bhv_configure
+        return item.bhv_configure_cls()
 
     
 # CmdBuild:
@@ -539,7 +539,7 @@ class CmdBuild (Command) :
         return ((CmdConfigure(), item),)
 
     def get_behaviour (self, item) :
-        return item.bhv_build
+        return item.bhv_build_cls()
 
 
 # CmdInstall:
@@ -552,7 +552,7 @@ class CmdInstall (Command) :
         return ((CmdBuild(), item),)
 
     def get_behaviour (self, item) :
-        return item.bhv_install
+        return item.bhv_install_cls()
 
 
 # TaskPool:
