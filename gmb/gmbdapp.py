@@ -12,6 +12,26 @@ def gmbrepr (obj, descr) :
     return '<%s %s>' % (obj.__class__.__name__, descr)
 
 
+# PipeThread:
+#
+class PipeThread :
+
+    def __init__ (self, name, fin, log_extra=None) :
+        self.name = name
+        self.fin = fin
+        self.log_extra = log_extra
+        self.thread = threading.Thread(target=self.__run_T)
+        self.thread.run()
+
+    def join (self) :
+        self.thread.join()
+
+    def __run_T (self) :
+        for line in self.fin :
+            trace("%s: %s" % (self.name, line), extra=self.log_extra)
+        trace("%s: EOF" % self.name)
+
+
 # gmbexec:
 #
 def gmbexec (cmd, log_extra=None, **kwargs) :
@@ -21,7 +41,9 @@ def gmbexec (cmd, log_extra=None, **kwargs) :
     prompt = '%s>' % cwd # [todo] user@hostname
     # [fixme] quote cmd
     trace("%s %s" % (prompt, ' '.join(cmd)), extra=log_extra)
-    proc = subprocess.Popen(cmd, cwd=cwd, **kwargs)
+    proc = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, universal_newlines=True, **kwargs)
+    p_out = PipeThread('p-out', proc.stdout, log_extra=log_extra)
+    p_out.join()
     r = proc.wait()
     assert r == 0, r
 
