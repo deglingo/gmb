@@ -256,6 +256,12 @@ class CfgBuild (CfgItem) :
 class Behaviour :
 
 
+    # __init__:
+    #
+    def __init__ (self, task) :
+        self.task = task
+
+        
     # popen:
     #
     def popen (self, cmd, **kwargs) :
@@ -512,8 +518,8 @@ class CmdBootstrap (Command) :
     def get_depends (self, item) :
         return ()
 
-    def get_behaviour (self, item) :
-        return item.bhv_bootstrap_cls()
+    def get_behaviour (self, task) :
+        return task.item.bhv_bootstrap_cls(task)
 
 
 # CmdConfigure:
@@ -525,8 +531,8 @@ class CmdConfigure (Command) :
     def get_depends (self, item) :
         return ((CmdBootstrap(), item.source),)
 
-    def get_behaviour (self, item) :
-        return item.bhv_configure_cls()
+    def get_behaviour (self, task) :
+        return task.item.bhv_configure_cls(task)
 
     
 # CmdBuild:
@@ -538,8 +544,8 @@ class CmdBuild (Command) :
     def get_depends (self, item) :
         return ((CmdConfigure(), item),)
 
-    def get_behaviour (self, item) :
-        return item.bhv_build_cls()
+    def get_behaviour (self, task) :
+        return task.item.bhv_build_cls(task)
 
 
 # CmdInstall:
@@ -551,8 +557,8 @@ class CmdInstall (Command) :
     def get_depends (self, item) :
         return ((CmdBuild(), item),)
 
-    def get_behaviour (self, item) :
-        return item.bhv_install_cls()
+    def get_behaviour (self, task) :
+        return task.item.bhv_install_cls(task)
 
 
 # TaskPool:
@@ -713,7 +719,7 @@ class Scheduler :
         status = Task.S_SUCCESS
         exc_info = None
         try:
-            bhv = task.cmd.get_behaviour(task.item)
+            bhv = task.cmd.get_behaviour(task)
             if bhv.check_run(task.cmd, task.item) :
                 bhv.run(task.cmd, task.item)
         except:
