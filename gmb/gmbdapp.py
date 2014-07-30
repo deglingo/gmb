@@ -618,6 +618,7 @@ class Task :
     S_ERROR = 3
 
     pool = property(lambda s: s._wrpool())
+    ssid = property(lambda s: s.pool.ssid)
 
 
     # __init__:
