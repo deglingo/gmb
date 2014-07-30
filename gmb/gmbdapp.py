@@ -655,6 +655,7 @@ class Task :
         self.auto = auto
         self.state = Task.S_WAIT
         self.depends = []
+        self.rdepends = []
 
 
     # __repr__:
@@ -785,7 +786,9 @@ class Scheduler :
         pool.tasks.append(task)
         for dep_cmd, dep_item in cmd.get_depends(item) :
             dep_task = self.__schedule_task(pool, dep_cmd, dep_item, auto=True)
+            # [FIXME] ref cycle
             task.depends.append(dep_task)
+            dep_task.rdepends.append(task)
         return task
 
 
