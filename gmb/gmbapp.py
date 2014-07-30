@@ -72,8 +72,9 @@ class GmbApp :
         fout.flush()
         fout.close()
         # recv
+        unpickler = pickle.Unpickler(fin)
         while True :
-            obj = pickle.load(fin)
+            obj = unpickler.load()
             print('MSG: %s' % repr(obj))
         assert 0, "bye"
 

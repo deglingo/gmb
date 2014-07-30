@@ -14,13 +14,13 @@ def gmbrepr (obj, descr) :
 
 # gmbexec:
 #
-def gmbexec (cmd, **kwargs) :
+def gmbexec (cmd, log_extra=None, **kwargs) :
     cwd = kwargs.pop('cwd', None)
     if cwd is None :
         cwd = os.getcwd()
     prompt = '%s>' % cwd # [todo] user@hostname
     # [fixme] quote cmd
-    trace("%s %s" % (prompt, ' '.join(cmd)))
+    trace("%s %s" % (prompt, ' '.join(cmd)), extra=log_extra)
     proc = subprocess.Popen(cmd, cwd=cwd, **kwargs)
     r = proc.wait()
     assert r == 0, r
@@ -265,7 +265,7 @@ class Behaviour :
     # popen:
     #
     def popen (self, cmd, **kwargs) :
-        return gmbexec(cmd, **kwargs)
+        return gmbexec(cmd, log_extra={'ssid': self.task.ssid}, **kwargs)
 
 
 # BhvBootstrap:
@@ -499,6 +499,7 @@ class Server :
         pickler = pickle.Pickler(f)
         while True :
             msg = cli.msg_queue.get()
+            trace("SEND[%d] >> %s" % (cli.clid, msg))
             pickler.dump(msg)
             f.flush()
 
