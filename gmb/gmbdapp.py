@@ -28,6 +28,7 @@ class PipeThread :
 
     def __run_T (self) :
         for line in self.fin :
+            line = line.rstrip('\n')
             trace("%s: %s" % (self.name, line), extra=self.log_extra)
         trace("%s: EOF" % self.name)
 
