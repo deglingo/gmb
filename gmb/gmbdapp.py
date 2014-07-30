@@ -254,7 +254,12 @@ class CfgBuild (CfgItem) :
 # Behaviour:
 #
 class Behaviour :
-    pass
+
+
+    # popen:
+    #
+    def popen (self, cmd, **kwargs) :
+        return gmbexec(cmd, **kwargs)
 
 
 # BhvBootstrap:
@@ -301,7 +306,7 @@ class BhvBootstrapGNU (BhvBootstrap) :
     def run (self, cmd, item) :
         trace("bootstrapping source %s" % item)
         cmd = ['sh', './autogen']
-        gmbexec(cmd, cwd=item.srcdir)
+        self.popen(cmd, cwd=item.srcdir)
         item.set_state('bootstrap', 'done')
 
 
