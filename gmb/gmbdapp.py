@@ -21,7 +21,7 @@ class PipeThread :
         self.fin = fin
         self.log_extra = log_extra
         self.thread = threading.Thread(target=self.__run_T)
-        self.thread.run()
+        self.thread.start()
 
     def join (self) :
         self.thread.join()
