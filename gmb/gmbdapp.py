@@ -523,7 +523,6 @@ class Server :
         pickler = pickle.Pickler(f)
         while True :
             msg = cli.msg_queue.get()
-            trace("SEND[%d] >> %s" % (cli.clid, msg))
             pickler.dump(msg)
             f.flush()
 
