@@ -75,7 +75,12 @@ class GmbApp :
         unpickler = pickle.Unpickler(fin)
         while True :
             obj = unpickler.load()
-            print('MSG: %s' % repr(obj))
+            key = obj[0]
+            if key == 'log' :
+                lvl, msg = obj[1]
+                log(lvl, msg)
+            else :
+                trace("ERROR: unknown message key: %s" % repr(obj))
         assert 0, "bye"
 
 # exec

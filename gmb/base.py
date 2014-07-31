@@ -2,6 +2,7 @@
 
 __all__ = [
     'log_setup',
+    'log',
     'trace',
     'error',
 ]
@@ -30,6 +31,11 @@ def log_setup (domain) :
 
 # logging funcs
 #
+def log (lvl, msg, *args, **kwargs) :
+    assert LOG_DOMAIN is not None
+    logger = logging.getLogger(LOG_DOMAIN)
+    logger.log(lvl, msg, *args, **kwargs)
+    
 def trace (msg, *args, **kwargs) :
     assert LOG_DOMAIN is not None
     logger = logging.getLogger(LOG_DOMAIN)
