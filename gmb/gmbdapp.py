@@ -364,7 +364,7 @@ class BhvConfigureGNU (BhvConfigure) :
         except FileExistsError: pass
         configure = os.path.join(item.source.srcdir, 'configure')
         cmd = [configure, '--prefix', item.target.prefix]
-        gmbexec(cmd, cwd=item.builddir)
+        self.popen(cmd, cwd=item.builddir)
         item.set_state('configure', 'done')
 
 
@@ -407,7 +407,7 @@ class BhvBuildGNU (BhvBuild) :
     #
     def run (self, cmd, item) :
         trace("build %s" % item)
-        gmbexec(['make'], cwd=item.builddir)
+        self.popen(['make'], cwd=item.builddir)
         item.set_state('build', 'done')
 
 
@@ -430,7 +430,7 @@ class BhvInstallGNU (BhvInstall) :
     #
     def run (self, cmd, item) :
         trace("install %s" % item)    
-        gmbexec(['make', 'install'], cwd=item.builddir)
+        self.popen(['make', 'install'], cwd=item.builddir)
         item.set_state('install', 'done')
 
 
