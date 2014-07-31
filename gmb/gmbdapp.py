@@ -484,14 +484,15 @@ class Server :
         self.listen_thread.start()
 
 
-    # send_log_record:
+    # send:
     #
-    def send_log_record (self, clid, rec) :
+    def send (self, clid, msg) :
         with self.clients_lock :
             client = self.clients.get(clid)
         if client is None :
-            return
-        client.msg_queue.put(('log', rec.message))
+            # [fixme] ?
+            trace("ERROR: client not found: %s" % clid)
+        client.msg_queue.put(msg)
 
 
     # __listen_T:
@@ -952,8 +953,9 @@ class GmbdApp :
     # __broadcast_log:
     #
     def __broadcast_log (self, ssid, rec) :
+        msg = (rec.levelno, rec.message)
         for clid in self.sspool.list_clients(ssid) :
-            self.server.send_log_record(clid, rec)
+            self.server.send(clid, ('log', msg))
 
 
 # exec
