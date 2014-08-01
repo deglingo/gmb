@@ -1,6 +1,6 @@
 #
 
-import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess, json, stat, logging, weakref
+import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess, json, stat, logging, weakref, functools
 
 from gmb.base import *
 from gmb.sysconf import SYSCONF
@@ -79,16 +79,29 @@ class ClientLogHandler (logging.Handler) :
 
     # __init__:
     #
-    def __init__ (self, broadcast) :
+    def __init__ (self, clid, send_func) :
         logging.Handler.__init__(self, 1)
-        self.broadcast = broadcast
+        self.clid = clid
+        self.send_func = send_func
 
 
     # emit:
     #
     def emit (self, rec) :
-        print("[%d] >> %s" % (rec.ssid, rec.message))
-        self.broadcast(rec.ssid, rec)
+        print("[%d/%d] >> %s" % (rec.ssid, self.clid, rec.message))
+        self.send_func(self.clid, rec)
+
+
+# ClientLogFilter:
+#
+class ClientLogFilter :
+
+    def __init__ (self, clid, ssid) :
+        self.clid = clid
+        self.ssid = ssid
+
+    def filter (self, rec) :
+        return getattr(rec, 'ssid', 0) == self.ssid
 
 
 # Config:
@@ -891,15 +904,12 @@ class GmbdApp :
                     assert 0, (o, a)
             #
             self.sspool = SessionPool()
+            self.client_log_handlers = {}
             #
             self.event_queue = queue.Queue()
             self.main_thread = threading.Thread(target=self.__main_T)
             self.server = Server(port=port, event_queue=self.event_queue)
             self.scheduler = Scheduler()
-            # add the client log handler
-            hdlr = ClientLogHandler(self.__broadcast_log)
-            hdlr.addFilter(lambda r: getattr(r, 'ssid', 0) != 0)
-            self.logger.addHandler(hdlr)
             #
             self.main_thread.start()
             self.server.start()
@@ -936,6 +946,7 @@ class GmbdApp :
                 clid = event[1]
                 ssid = self.sspool.open_session()
                 self.sspool.join_session(ssid, clid)
+                self.__setup_client_log_handler(ssid, clid)
                 trace("session %d created for client %d" % (ssid, clid))
             elif key == 'message' :
                 trace('message: %s' % repr(event[1:]))
@@ -950,12 +961,21 @@ class GmbdApp :
                 trace('FIXME: unhandled event: %s' % repr(event[1:]))
 
 
-    # __broadcast_log:
+    # __setup_client_log_handler:
     #
-    def __broadcast_log (self, ssid, rec) :
+    def __setup_client_log_handler (self, ssid, clid) :
+        h = ClientLogHandler(clid, self.__send_log)
+        f = ClientLogFilter(clid, ssid)
+        h.addFilter(f)
+        self.client_log_handlers[clid] = (h, f)
+        self.logger.addHandler(h)
+
+
+    # __send_log:
+    #
+    def __send_log (self, clid, rec) :
         msg = (rec.levelno, rec.message)
-        for clid in self.sspool.list_clients(ssid) :
-            self.server.send(clid, ('log', msg))
+        self.server.send(clid, ('log', msg))
 
 
 # exec
