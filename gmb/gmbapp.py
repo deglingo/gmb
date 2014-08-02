@@ -11,8 +11,9 @@ USAGE = """\
 USAGE: gmb [OPTIONS] [COMMAND] [ITEM...]
 
 OPTIONS:
-
-  -h, --help    print this message and exit
+  -V, --cmd-verbose    increase command verbosity
+  -Q, --cmd-quiet      decrease command verbosity
+  -h, --help           print this message and exit
 """
 
 
@@ -41,8 +42,9 @@ class GmbApp :
         # parse the command line
         trace('args: %s' % repr(sys.argv))
         port = 5555
-        shortopts = 'p:h'
-        longopts = ['port=', 'help']
+        cmd_verb_level = 1
+        shortopts = 'p:VQh'
+        longopts = ['port=', 'cmd-verbose', 'cmd-quiet', 'help']
         opts, args = getopt.gnu_getopt(sys.argv[1:], shortopts, longopts)
         for o, a in opts :
             if o in ('-h', '--help') :
@@ -50,6 +52,10 @@ class GmbApp :
                 sys.exit(0)
             elif o in ('-p', '--port') :
                 port = int(a)
+            elif o in ('-V', '--cmd-verbose') :
+                cmd_verb_level += 1
+            elif o in ('-Q', '--cmd-quiet') :
+                cmd_verb_level -= 1
             else :
                 assert 0, (o, a)
         # run
@@ -71,7 +77,7 @@ class GmbApp :
         fout = s.makefile('wb')
         fin = s.makefile('rb')
         # send
-        msg = ('verb-level', 6, 2)
+        msg = ('verb-level', 6, cmd_verb_level)
         pickle.dump(msg, fout)
         fout.flush()
         msg = ('command', 'install', '.*')

@@ -30,7 +30,7 @@ class PipeThread :
     def __run_T (self) :
         for line in self.fin :
             line = line.rstrip('\n')
-            log(self.log_level, "%s: %s" % (self.name, line), extra=self.log_extra)
+            log(self.log_level, line, extra=self.log_extra)
         trace("%s: EOF" % self.name)
 
 
