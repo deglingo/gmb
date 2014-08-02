@@ -84,10 +84,6 @@ def log_setup (domain) :
     LOG_DOMAIN = domain
     logger = logging.getLogger(domain)
     logger.setLevel(1)
-    hdlr = logging.StreamHandler(sys.stderr)
-    fmt = logging.Formatter('%(name)s: %(message)s')
-    hdlr.setFormatter(fmt)
-    logger.addHandler(hdlr)
     return logger
 
 

@@ -1,6 +1,6 @@
 #
 
-import sys, getopt, socket, time, pickle
+import sys, getopt, socket, time, pickle, logging
 
 from gmb.base import *
 
@@ -32,7 +32,11 @@ class GmbApp :
     # run:
     #
     def run (self) :
-        log_setup('gmb')
+        self.logger = log_setup('gmb')
+        hdlr = logging.StreamHandler(sys.stderr)
+        fmt = logging.Formatter('%(name)s: %(message)s')
+        hdlr.setFormatter(fmt)
+        self.logger.addHandler(hdlr)
         trace('hello')
         # parse the command line
         trace('args: %s' % repr(sys.argv))
