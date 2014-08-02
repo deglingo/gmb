@@ -948,7 +948,7 @@ class GmbdApp :
                 ssid = self.sspool.open_session()
                 self.sspool.join_session(ssid, clid)
                 self.__setup_client_log_handler(ssid, clid)
-                trace("session %d created for client %d" % (ssid, clid))
+                trace("session %d created for client %d" % (ssid, clid), extra={'ssid': ssid})
             elif key == 'message' :
                 trace('message: %s' % repr(event[1:]))
                 clid = event[1]
@@ -961,6 +961,8 @@ class GmbdApp :
                     pkgs = self.config.list_packages()
                     builds = [self.config.get_build(target, p) for p in pkgs]
                     self.scheduler.schedule_command(ssid, 'install', builds)
+                elif msgkey == 'verb-level' :
+                    self.__set_client_verb_level(clid, int(msg[1]), int(msg[2]))
                 else :
                     trace("[FIXME] unknown message key: %s" % repr(msgkey))
             else :
@@ -977,6 +979,12 @@ class GmbdApp :
         h.addFilter(f2)
         self.client_log_handlers[clid] = (h, f1, f2)
         self.logger.addHandler(h)
+
+
+    # __set_client_verb_level:
+    #
+    def __set_client_verb_level (self, clid, lvl, cmdlvl) :
+        self.client_log_handlers[clid][2].set_level(lvl, cmdlvl)
 
 
     # __send_log:
