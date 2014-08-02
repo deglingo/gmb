@@ -938,7 +938,7 @@ class GmbdApp :
         # file handler
         try: os.mkdir(self.config.gmbdlogdir)
         except FileExistsError: pass
-        fname = os.path.join(self.config.gmbdlogdir, 'gmb.log')
+        fname = os.path.join(self.config.gmbdlogdir, 'gmbd.log')
         h = logging.handlers.RotatingFileHandler(fname, maxBytes=512*1024, backupCount=5)
         h.doRollover()
         h.setLevel(1)
