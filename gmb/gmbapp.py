@@ -67,6 +67,9 @@ class GmbApp :
         fout = s.makefile('wb')
         fin = s.makefile('rb')
         # send
+        msg = ('verb-level', 3, 1)
+        pickle.dump(msg, fout)
+        fout.flush()
         msg = ('command', 'install', '.*')
         pickle.dump(msg, fout)
         fout.flush()

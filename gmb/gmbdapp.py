@@ -951,12 +951,17 @@ class GmbdApp :
             elif key == 'message' :
                 trace('message: %s' % repr(event[1:]))
                 clid = event[1]
-                ssid = self.sspool.get_client_session(clid)
-                assert ssid != 0, clid
-                target = self.config.targets['home']
-                pkgs = self.config.list_packages()
-                builds = [self.config.get_build(target, p) for p in pkgs]
-                self.scheduler.schedule_command(ssid, 'install', builds)
+                msg = event[2]
+                msgkey = msg[0]
+                if msgkey == 'command' :
+                    ssid = self.sspool.get_client_session(clid)
+                    assert ssid != 0, clid
+                    target = self.config.targets['home']
+                    pkgs = self.config.list_packages()
+                    builds = [self.config.get_build(target, p) for p in pkgs]
+                    self.scheduler.schedule_command(ssid, 'install', builds)
+                else :
+                    trace("[FIXME] unknown message key: %s" % repr(msgkey))
             else :
                 trace('FIXME: unhandled event: %s' % repr(event[1:]))
 
