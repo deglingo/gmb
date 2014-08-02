@@ -12,6 +12,7 @@ __all__ = [
     'log_setup',
     'log',
     'trace',
+    'info',
     'error',
 ]
 
@@ -96,6 +97,9 @@ def log (lvl, msg, *args, **kwargs) :
     assert LOG_DOMAIN is not None
     logger = logging.getLogger(LOG_DOMAIN)
     logger.log(lvl, msg, *args, **kwargs)
+
+def info (m, *a, **k) :
+    log(LOG_LEVEL_INFO, m, *a, **k)
     
 def trace (msg, *args, **kwargs) :
     assert LOG_DOMAIN is not None

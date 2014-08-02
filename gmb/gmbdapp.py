@@ -42,7 +42,7 @@ def gmbexec (cmd, log_extra=None, **kwargs) :
         cwd = os.getcwd()
     prompt = '%s>' % cwd # [todo] user@hostname
     # [fixme] quote cmd
-    trace("%s %s" % (prompt, ' '.join(cmd)), extra=log_extra)
+    info("%s %s" % (prompt, ' '.join(cmd)), extra=log_extra)
     proc = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, **kwargs)
     p_out = PipeThread('p-out', proc.stdout, log_level=LOG_LEVEL_CMDOUT, log_extra=log_extra)
     p_err = PipeThread('p-err', proc.stderr, log_level=LOG_LEVEL_CMDERR, log_extra=log_extra)
