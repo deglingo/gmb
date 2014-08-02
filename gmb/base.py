@@ -8,6 +8,7 @@ __all__ = [
     'LOG_LEVEL_CRITICAL',
     'LOG_LEVEL_CMDOUT',
     'LOG_LEVEL_CMDERR',
+    'LogLevelFilter',
     'log_setup',
     'log',
     'trace',
@@ -41,6 +42,36 @@ LOG_LEVEL_ALL = set((LOG_LEVEL_DEBUG,
 
 # just in case, make sure all levels are unique
 assert len(LOG_LEVEL_ALL) == 7
+
+
+# LogLevelFilter:
+#
+class LogLevelFilter :
+
+
+    # __init__:
+    #
+    def __init__ (self, lvl=4, cmdlvl=1) :
+        self.set_level(lvl, cmdlvl)
+
+
+    # set_level:
+    #
+    def set_level (self, lvl, cmdlvl) :
+        self.levels = l = set()
+        if lvl > 0 : l.add(LOG_LEVEL_CRITICAL)
+        if lvl > 1 : l.add(LOG_LEVEL_ERROR)
+        if lvl > 2 : l.add(LOG_LEVEL_WARNING)
+        if lvl > 3 : l.add(LOG_LEVEL_INFO)
+        if lvl > 4 : l.add(LOG_LEVEL_DEBUG)
+        if cmdlvl > 0 : l.add(LOG_LEVEL_CMDERR)
+        if cmdlvl > 1 : l.add(LOG_LEVEL_CMDOUT)
+
+
+    # filter:
+    #
+    def filter (self, rec) :
+        return rec.levelno in self.levels
 
 
 # log_setup:

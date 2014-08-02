@@ -16,9 +16,10 @@ def gmbrepr (obj, descr) :
 #
 class PipeThread :
 
-    def __init__ (self, name, fin, log_extra=None) :
+    def __init__ (self, name, fin, log_level, log_extra=None) :
         self.name = name
         self.fin = fin
+        self.log_level = log_level
         self.log_extra = log_extra
         self.thread = threading.Thread(target=self.__run_T)
         self.thread.start()
@@ -29,7 +30,7 @@ class PipeThread :
     def __run_T (self) :
         for line in self.fin :
             line = line.rstrip('\n')
-            trace("%s: %s" % (self.name, line), extra=self.log_extra)
+            log(self.log_level, "%s: %s" % (self.name, line), extra=self.log_extra)
         trace("%s: EOF" % self.name)
 
 
@@ -43,8 +44,8 @@ def gmbexec (cmd, log_extra=None, **kwargs) :
     # [fixme] quote cmd
     trace("%s %s" % (prompt, ' '.join(cmd)), extra=log_extra)
     proc = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, **kwargs)
-    p_out = PipeThread('p-out', proc.stdout, log_extra=log_extra)
-    p_err = PipeThread('p-err', proc.stderr, log_extra=log_extra)
+    p_out = PipeThread('p-out', proc.stdout, log_level=LOG_LEVEL_CMDOUT, log_extra=log_extra)
+    p_err = PipeThread('p-err', proc.stderr, log_level=LOG_LEVEL_CMDERR, log_extra=log_extra)
     p_out.join()
     p_err.join()
     r = proc.wait()
@@ -970,9 +971,11 @@ class GmbdApp :
     #
     def __setup_client_log_handler (self, ssid, clid) :
         h = ClientLogHandler(clid, self.__send_log)
-        f = ClientLogFilter(clid, ssid)
-        h.addFilter(f)
-        self.client_log_handlers[clid] = (h, f)
+        f1 = ClientLogFilter(clid, ssid)
+        h.addFilter(f1)
+        f2 = LogLevelFilter()
+        h.addFilter(f2)
+        self.client_log_handlers[clid] = (h, f1, f2)
         self.logger.addHandler(h)
 
 
