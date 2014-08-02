@@ -491,7 +491,7 @@ class Server :
     # start:
     #
     def start (self) :
-        print('starting server on port %d ...' % self.port)
+        trace('starting server on port %d ...' % self.port)
         self.listen_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.listen_sock.bind((self.host, self.port))
         self.listen_sock.listen(1)
@@ -515,7 +515,7 @@ class Server :
     def __listen_T (self) :
         while True :
             conn, addr = self.listen_sock.accept()
-            print('Connected by', addr)
+            trace('connected by %s' % repr(addr))
             client = Client(self.clid_counter.next(), conn, addr)
             with self.clients_lock :
                 self.clients[client.clid] = client
