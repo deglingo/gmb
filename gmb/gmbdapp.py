@@ -935,6 +935,11 @@ class GmbdApp :
     #
     def __setup_logger (self) :
         self.logger = log_setup('gmbd')
+        # console handler
+        hdlr = logging.StreamHandler(sys.stderr)
+        fmt = logging.Formatter('%(name)s: %(message)s')
+        hdlr.setFormatter(fmt)
+        self.logger.addHandler(hdlr)
         # file handler
         try: os.mkdir(self.config.gmbdlogdir)
         except FileExistsError: pass
