@@ -1,6 +1,6 @@
 #
 
-import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess, json, stat, logging, weakref, functools
+import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess, json, stat, logging, logging.handlers, weakref, functools
 
 from gmb.base import *
 from gmb.sysconf import SYSCONF
@@ -113,6 +113,7 @@ class Config :
     # __init__:
     #
     def __init__ (self) :
+        self.gmbdlogdir = os.path.join(SYSCONF['pkglogdir'], 'gmbd')
         self.pkglistdir = os.path.join(SYSCONF['pkgsysconfdir'], 'packages.d')
         self.packages = {}
         self.builds = {} # map <(target, pkg), build>
@@ -888,11 +889,11 @@ class GmbdApp :
     #
     def run (self) :
         try:
+            # create the config
+            self.config = Config()
             # setup the logger
             self.__setup_logger()
             trace('hello')
-            # create the config
-            self.__init_config()
             # parse command line
             shortopts = 'p:'
             longopts = ['port=']
@@ -903,6 +904,8 @@ class GmbdApp :
                     port = int(a)
                 else :
                     assert 0, (o, a)
+            # init the config
+            self.__init_config()
             #
             self.sspool = SessionPool()
             self.client_log_handlers = {}
@@ -924,8 +927,7 @@ class GmbdApp :
     # __init_config:
     #
     def __init_config (self) :
-        self.config = Config()
-        trace("reading packages list from '%s'" % self.config.pkglistdir)
+        # trace("reading packages list from '%s'" % self.config.pkglistdir)
         self.config.read_packages()
 
 
@@ -933,6 +935,14 @@ class GmbdApp :
     #
     def __setup_logger (self) :
         self.logger = log_setup('gmbd')
+        # file handler
+        try: os.mkdir(self.config.gmbdlogdir)
+        except FileExistsError: pass
+        fname = os.path.join(self.config.gmbdlogdir, 'gmb.log')
+        h = logging.handlers.RotatingFileHandler(fname, maxBytes=512*1024, backupCount=5)
+        h.doRollover()
+        h.setLevel(1)
+        self.logger.addHandler(h)
 
 
     # __main_T:

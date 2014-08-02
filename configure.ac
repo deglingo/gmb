@@ -2,6 +2,8 @@ AC_INIT([gmb], [0.0.0])
 AM_INIT_AUTOMAKE
 
 AC_SUBST([pkgsysconfdir], '${sysconfdir}/${PACKAGE}')
+AC_SUBST([logdir], '${localstatedir}/log')
+AC_SUBST([pkglogdir], '${logdir}/${PACKAGE}')
 
 AC_PROG_LN_S
 
