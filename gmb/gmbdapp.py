@@ -89,7 +89,7 @@ class ClientLogHandler (logging.Handler) :
     # emit:
     #
     def emit (self, rec) :
-        print("[%d/%d] >> %s" % (rec.ssid, self.clid, rec.message))
+        # print("[%d/%d] >> %s" % (rec.ssid, self.clid, rec.message))
         self.send_func(self.clid, rec)
 
 
