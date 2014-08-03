@@ -78,18 +78,8 @@ class GmbApp :
         host = 'localhost'
         trace('connecting to %s:%d' % (host, port))
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        ntries = 0
-        while True :
-            try:
-                s.connect((host, port))
-            except ConnectionRefusedError:
-                if ntries > 10 :
-                    raise
-                else :
-                    print('connection refused, retry...')
-                    time.sleep(0.1)
-            break
-        print('connected!')
+        s.connect((host, port))
+        trace('connected')
         fout = s.makefile('wb')
         fin = s.makefile('rb')
         # send
