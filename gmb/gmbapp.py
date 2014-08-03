@@ -37,6 +37,8 @@ class GmbApp :
         hdlr = logging.StreamHandler(sys.stderr)
         fmt = logging.Formatter('%(name)s: %(message)s')
         hdlr.setFormatter(fmt)
+        filt = LogLevelFilter()
+        hdlr.addFilter(filt)
         self.logger.addHandler(hdlr)
         trace('hello')
         # parse the command line
