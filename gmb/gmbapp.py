@@ -17,6 +17,18 @@ OPTIONS:
 """
 
 
+# LogDomainFilter:
+#
+class LogDomainFilter :
+
+    def filter (self, rec) :
+        if rec.levelno in (LOG_LEVEL_CMDOUT, LOG_LEVEL_CMDERR) :
+            rec.dom_prefix = ''
+        else :
+            rec.dom_prefix = '%s: ' % rec.name
+        return True
+
+
 # GmbApp:
 #
 class GmbApp :
@@ -35,8 +47,10 @@ class GmbApp :
     def run (self) :
         self.logger = log_setup('gmb')
         hdlr = logging.StreamHandler(sys.stderr)
-        fmt = logging.Formatter('%(name)s: %(message)s')
+        fmt = logging.Formatter('%(dom_prefix)s%(message)s')
         hdlr.setFormatter(fmt)
+        dom_filt = LogDomainFilter()
+        hdlr.addFilter(dom_filt)
         filt = LogLevelFilter()
         hdlr.addFilter(filt)
         self.logger.addHandler(hdlr)
