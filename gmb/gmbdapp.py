@@ -607,9 +607,13 @@ class CmdInstall (Command) :
 class TaskPool :
 
 
+    __id_counter = IDCounter()
+
+    
     # __init__:
     #
     def __init__ (self, ssid) :
+        self.poolid = TaskPool.__id_counter.next()
         self.ssid = ssid
         self.tasks = []
 
@@ -686,6 +690,12 @@ class Task :
 class Scheduler :
 
 
+    # __init__:
+    #
+    def __init__ (self, event_queue) :
+        self.event_queue = event_queue
+
+        
     # start:
     #
     def start (self) :
@@ -731,6 +741,7 @@ class Scheduler :
         if self.current_pool is not None :
             if not (self.current_pool.t_wait or self.current_pool.t_run) :
                 trace("task pool finished: %s" % self.current_pool)
+                self.event_queue.put(('pool-term', self.current_pool.poolid))
                 self.current_pool = None
         # if no pool is currently at work, start the first one
         if self.current_pool is None :
@@ -913,7 +924,7 @@ class GmbdApp :
             self.event_queue = queue.Queue()
             self.main_thread = threading.Thread(target=self.__main_T)
             self.server = Server(port=port, event_queue=self.event_queue)
-            self.scheduler = Scheduler()
+            self.scheduler = Scheduler(self.event_queue)
             #
             self.main_thread.start()
             self.server.start()
