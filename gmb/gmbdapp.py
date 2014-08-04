@@ -965,6 +965,7 @@ class GmbdApp :
     # __main_T:
     #
     def __main_T (self) :
+        self.fixme_pool_owner = {} # [fixme]
         while True :
             event = self.event_queue.get()
             trace('event: %s' % repr(event))
@@ -988,11 +989,16 @@ class GmbdApp :
                     pkgs = self.config.list_packages()
                     builds = [self.config.get_build(target, p) for p in pkgs]
                     poolid = self.scheduler.schedule_command(ssid, 'install', builds)
+                    self.fixme_pool_owner[poolid] = clid
                     self.server.send(clid, ('pool-reg', poolid))
                 elif msgkey == 'verb-level' :
                     self.__set_client_verb_level(clid, int(msg[1]), int(msg[2]))
                 else :
                     trace("[FIXME] unknown message key: %s" % repr(msgkey))
+            elif key == 'pool-term' :
+                poolid = event[1]
+                clid = self.fixme_pool_owner[poolid]
+                self.server.send(clid, ('pool-term', poolid))
             else :
                 trace('FIXME: unhandled event: %s' % repr(event[1:]))
 
