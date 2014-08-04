@@ -305,7 +305,7 @@ class Behaviour :
     # popen:
     #
     def popen (self, cmd, **kwargs) :
-        return gmbexec(cmd, log_extra={'ssid': self.task.ssid}, **kwargs)
+        return gmbexec(cmd, log_extra={}, **kwargs)
 
 
 # BhvBootstrap:
@@ -612,9 +612,8 @@ class TaskPool :
     
     # __init__:
     #
-    def __init__ (self, ssid) :
+    def __init__ (self) :
         self.poolid = TaskPool.__id_counter.next()
-        self.ssid = ssid
         self.tasks = []
 
 
@@ -664,7 +663,6 @@ class Task :
     S_CANCEL = 4
 
     pool = property(lambda s: s._wrpool())
-    ssid = property(lambda s: s.pool.ssid)
 
 
     # __init__:
@@ -771,7 +769,7 @@ class Scheduler :
         if task.state == Task.S_CANCEL :
             return
         assert task.state == Task.S_WAIT, task
-        trace("task cancelled: %s" % task, extra={'ssid': task.ssid})
+        trace("task cancelled: %s" % task)
         task.state == Task.S_CANCEL
         task.pool.t_wait.remove(task)
         task.pool.t_done.append(task)
@@ -811,9 +809,9 @@ class Scheduler :
                 
     # schedule_command:
     #
-    def schedule_command (self, ssid, cmd, items) :
-        trace("scheduling command (ssid=%d) : %s %s" % (ssid, cmd, items), extra={'ssid': ssid})
-        pool = TaskPool(ssid)
+    def schedule_command (self, cmd, items) :
+        trace("scheduling command : %s %s" % (cmd, items))
+        pool = TaskPool()
         cmdcls = CmdInstall # [FIXME]
         for i in items :
             cmdobj = cmdcls()
@@ -842,46 +840,6 @@ class Scheduler :
             task.depends.append(dep_task)
             dep_task.rdepends.append(task)
         return task
-
-
-# Session:
-#
-class Session :
-
-    idcounter = IDCounter()
-
-    def __init__ (self) :
-        self.ssid = Session.idcounter.next()
-        self.clients = set()
-
-
-# SessionPool:
-#
-class SessionPool :
-
-    def __init__ (self) :
-        self.lock = threading.Lock()
-        self.sessions = {}      # map <ssid, Session>
-        self.sessions_clid = {} # map <clid, ssid>
-
-    def list_clients (self, ssid) :
-        with self.lock :
-            return list(self.sessions[ssid].clients)
-
-    def open_session (self) :
-        session = Session()
-        with self.lock :
-            self.sessions[session.ssid] = session
-        return session.ssid
-
-    def join_session (self, ssid, clid) :
-        with self.lock :
-            self.sessions[ssid].clients.add(clid) # [fixme]
-            self.sessions_clid[clid] = ssid
-
-    def get_client_session (self, clid) :
-        with self.lock :
-            return self.sessions_clid[clid]
 
 
 # GmbdApp:
@@ -919,7 +877,6 @@ class GmbdApp :
             # init the config
             self.__init_config()
             #
-            self.sspool = SessionPool()
             self.client_log_handlers = {}
             #
             self.event_queue = queue.Queue()
@@ -973,8 +930,7 @@ class GmbdApp :
             if key == 'connect' :
                 trace('connect: %s' % repr(event[1:]))
                 clid = event[1]
-                ssid = self.sspool.open_session()
-                self.sspool.join_session(ssid, clid)
+                ssid = 1 # [FIXME]
                 self.__setup_client_log_handler(ssid, clid)
                 trace("session %d created for client %d" % (ssid, clid), extra={'ssid': ssid})
             elif key == 'message' :
@@ -983,12 +939,10 @@ class GmbdApp :
                 msg = event[2]
                 msgkey = msg[0]
                 if msgkey == 'command' :
-                    ssid = self.sspool.get_client_session(clid)
-                    assert ssid != 0, clid
                     target = self.config.targets['home']
                     pkgs = self.config.list_packages()
                     builds = [self.config.get_build(target, p) for p in pkgs]
-                    poolid = self.scheduler.schedule_command(ssid, 'install', builds)
+                    poolid = self.scheduler.schedule_command('install', builds)
                     self.fixme_pool_owner[poolid] = clid
                     self.server.send(clid, ('pool-reg', poolid))
                 elif msgkey == 'verb-level' :
