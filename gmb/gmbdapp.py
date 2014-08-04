@@ -742,14 +742,16 @@ class Scheduler :
         # check if the current session has anything left to do
         if self.current_session is not None :
             if not (self.current_session.t_wait or self.current_session.t_run) :
-                trace("task session finished: %s" % self.current_session)
+                trace("session finished: %s" % self.current_session,
+                      extra={'ssid': self.current_session.ssid})
                 self.event_queue.put(('session-term', self.current_session.ssid))
                 self.current_session = None
         # if no session is currently at work, start the first one
         if self.current_session is None :
             if self.sessions :
                 self.current_session = self.sessions.pop(0)
-                trace("starting task session %s" % self.current_session)
+                trace("starting task session %s" % self.current_session,
+                      extra={'ssid': self.current_session.ssid})
                 self.current_session.start()
             else :
                 trace("all task sessions finished")
