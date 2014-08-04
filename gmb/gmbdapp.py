@@ -821,6 +821,7 @@ class Scheduler :
         with self.process_cond :
             self.task_pools.append(pool)
             self.process_cond.notify()
+        return pool.poolid
 
 
     # __schedule_task:
@@ -986,7 +987,8 @@ class GmbdApp :
                     target = self.config.targets['home']
                     pkgs = self.config.list_packages()
                     builds = [self.config.get_build(target, p) for p in pkgs]
-                    self.scheduler.schedule_command(ssid, 'install', builds)
+                    poolid = self.scheduler.schedule_command(ssid, 'install', builds)
+                    self.server.send(clid, ('pool-reg', poolid))
                 elif msgkey == 'verb-level' :
                     self.__set_client_verb_level(clid, int(msg[1]), int(msg[2]))
                 else :

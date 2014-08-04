@@ -99,7 +99,7 @@ class GmbApp :
                 lvl, msg = obj[1]
                 log(lvl, msg)
             else :
-                trace("ERROR: unknown message key: %s" % repr(obj))
+                error("unknown message key: %s" % repr(obj))
         assert 0, "bye"
 
 # exec
