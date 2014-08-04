@@ -97,12 +97,16 @@ class ClientLogHandler (logging.Handler) :
 #
 class ClientLogFilter :
 
-    def __init__ (self, clid, ssid) :
+    def __init__ (self, clid) :
         self.clid = clid
-        self.ssid = ssid
+        self.sessions = set()
+
+    def add_session (self, ssid) :
+        self.sessions.add(ssid)
 
     def filter (self, rec) :
-        return getattr(rec, 'ssid', 0) == self.ssid
+        return getattr(rec, 'clid', 0) == self.clid \
+          or getattr(rec, 'ssid', 0) in self.sessions
 
 
 # Config:
@@ -878,6 +882,7 @@ class GmbdApp :
             self.__init_config()
             #
             self.client_log_handlers = {}
+            self.session_owner = {}
             #
             self.event_queue = queue.Queue()
             self.main_thread = threading.Thread(target=self.__main_T)
@@ -922,7 +927,6 @@ class GmbdApp :
     # __main_T:
     #
     def __main_T (self) :
-        self.fixme_session_owner = {} # [fixme]
         while True :
             event = self.event_queue.get()
             trace('event: %s' % repr(event))
@@ -930,9 +934,8 @@ class GmbdApp :
             if key == 'connect' :
                 trace('connect: %s' % repr(event[1:]))
                 clid = event[1]
-                ssid = 1 # [FIXME]
-                self.__setup_client_log_handler(ssid, clid)
-                trace("session %d created for client %d" % (ssid, clid), extra={'ssid': ssid})
+                self.__setup_client_log_handler(clid)
+                trace("client %d connected" % clid)
             elif key == 'message' :
                 trace('message: %s' % repr(event[1:]))
                 clid = event[1]
@@ -943,7 +946,8 @@ class GmbdApp :
                     pkgs = self.config.list_packages()
                     builds = [self.config.get_build(target, p) for p in pkgs]
                     ssid = self.scheduler.schedule_command('install', builds)
-                    self.fixme_session_owner[ssid] = clid
+                    self.session_owner[ssid] = clid
+                    self.client_log_handlers[clid][1].add_session(ssid)
                     self.server.send(clid, ('session-reg', ssid))
                 elif msgkey == 'verb-level' :
                     self.__set_client_verb_level(clid, int(msg[1]), int(msg[2]))
@@ -951,7 +955,7 @@ class GmbdApp :
                     trace("[FIXME] unknown message key: %s" % repr(msgkey))
             elif key == 'session-term' :
                 ssid = event[1]
-                clid = self.fixme_session_owner[ssid]
+                clid = self.session_owner[ssid]
                 self.server.send(clid, ('session-term', ssid))
             else :
                 trace('FIXME: unhandled event: %s' % repr(event[1:]))
@@ -959,9 +963,9 @@ class GmbdApp :
 
     # __setup_client_log_handler:
     #
-    def __setup_client_log_handler (self, ssid, clid) :
+    def __setup_client_log_handler (self, clid) :
         h = ClientLogHandler(clid, self.__send_log)
-        f1 = ClientLogFilter(clid, ssid)
+        f1 = ClientLogFilter(clid)
         h.addFilter(f1)
         f2 = LogLevelFilter()
         h.addFilter(f2)
