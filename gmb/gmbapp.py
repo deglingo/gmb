@@ -98,9 +98,12 @@ class GmbApp :
             if key == 'log' :
                 lvl, msg = obj[1]
                 log(lvl, msg)
+            elif key == 'pool-term' :
+                info('pool terminated, bye')
+                break
             else :
                 error("unknown message key: %s" % repr(obj))
-        assert 0, "bye"
+        info("all done!")
 
 # exec
 if __name__ == '__main__' :
