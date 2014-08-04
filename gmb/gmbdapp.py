@@ -309,7 +309,7 @@ class Behaviour :
     # popen:
     #
     def popen (self, cmd, **kwargs) :
-        return gmbexec(cmd, log_extra={}, **kwargs)
+        return gmbexec(cmd, log_extra={'ssid': self.task.session.ssid}, **kwargs)
 
 
 # BhvBootstrap:
