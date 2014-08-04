@@ -602,9 +602,9 @@ class CmdInstall (Command) :
         return task.item.bhv_install_cls(task)
 
 
-# TaskPool:
+# Session:
 #
-class TaskPool :
+class Session :
 
 
     __id_counter = IDCounter()
@@ -613,7 +613,7 @@ class TaskPool :
     # __init__:
     #
     def __init__ (self) :
-        self.poolid = TaskPool.__id_counter.next()
+        self.ssid = Session.__id_counter.next()
         self.tasks = []
 
 
@@ -662,13 +662,13 @@ class Task :
     S_ERROR = 3
     S_CANCEL = 4
 
-    pool = property(lambda s: s._wrpool())
+    session = property(lambda s: s._wrsession())
 
 
     # __init__:
     #
-    def __init__ (self, pool, cmd, item, auto) :
-        self._wrpool = weakref.ref(pool)
+    def __init__ (self, session, cmd, item, auto) :
+        self._wrsession = weakref.ref(session)
         self.cmd = cmd
         self.item = item
         self.auto = auto
@@ -698,9 +698,9 @@ class Scheduler :
     #
     def start (self) :
         self.max_jobs = 2 # [fixme]
-        self.task_pools = []
+        self.sessions = []
         self.pending_tasks = []
-        self.current_pool = None
+        self.current_session = None
         self.process_cond = threading.Condition()
         self.thread = threading.Thread(target=self.__run_T)
         self.thread.start()
@@ -726,8 +726,8 @@ class Scheduler :
             trace("task terminated: %s (%s)" % (task, status))
             assert task.state == Task.S_RUN
             task.state = status
-            self.current_pool.t_run.remove(task)
-            self.current_pool.t_done.append(task)
+            self.current_session.t_run.remove(task)
+            self.current_session.t_done.append(task)
             if status == Task.S_SUCCESS :
                 assert exc_info is None, exc_info
             elif status == Task.S_ERROR :
@@ -735,28 +735,28 @@ class Scheduler :
             else :
                 assert 0, status
         self.pending_tasks = []
-        # check if the current pool has anything left to do
-        if self.current_pool is not None :
-            if not (self.current_pool.t_wait or self.current_pool.t_run) :
-                trace("task pool finished: %s" % self.current_pool)
-                self.event_queue.put(('pool-term', self.current_pool.poolid))
-                self.current_pool = None
-        # if no pool is currently at work, start the first one
-        if self.current_pool is None :
-            if self.task_pools :
-                self.current_pool = self.task_pools.pop(0)
-                trace("starting task pool %s" % self.current_pool)
-                self.current_pool.start()
+        # check if the current session has anything left to do
+        if self.current_session is not None :
+            if not (self.current_session.t_wait or self.current_session.t_run) :
+                trace("task session finished: %s" % self.current_session)
+                self.event_queue.put(('session-term', self.current_session.ssid))
+                self.current_session = None
+        # if no session is currently at work, start the first one
+        if self.current_session is None :
+            if self.sessions :
+                self.current_session = self.sessions.pop(0)
+                trace("starting task session %s" % self.current_session)
+                self.current_session.start()
             else :
-                trace("all task pools finished")
+                trace("all task sessions finished")
         # try to start the next task(s)
-        if self.current_pool is not None :
-            while self.current_pool.t_wait and len(self.current_pool.t_run) < self.max_jobs :
-                task = self.current_pool.get_next_task()
+        if self.current_session is not None :
+            while self.current_session.t_wait and len(self.current_session.t_run) < self.max_jobs :
+                task = self.current_session.get_next_task()
                 if task is None :
-                    assert self.current_pool.t_run # !!
+                    assert self.current_session.t_run # !!
                     break
-                self.__start_task(self.current_pool, task)
+                self.__start_task(self.current_session, task)
 
 
     # __cancel_rdepends:
@@ -771,18 +771,18 @@ class Scheduler :
         assert task.state == Task.S_WAIT, task
         trace("task cancelled: %s" % task)
         task.state == Task.S_CANCEL
-        task.pool.t_wait.remove(task)
-        task.pool.t_done.append(task)
+        task.session.t_wait.remove(task)
+        task.session.t_done.append(task)
 
 
     # __start_task:
     #
-    def __start_task (self, pool, task) :
+    def __start_task (self, session, task) :
         trace("starting task: %s" % task)
         assert task.state == Task.S_WAIT
         task.state = Task.S_RUN
-        pool.t_wait.remove(task)
-        pool.t_run.append(task)
+        session.t_wait.remove(task)
+        session.t_run.append(task)
         task_thread = threading.Thread(target=self.__run_task, args=(task,))
         task_thread.start()
 
@@ -811,31 +811,31 @@ class Scheduler :
     #
     def schedule_command (self, cmd, items) :
         trace("scheduling command : %s %s" % (cmd, items))
-        pool = TaskPool()
+        session = Session()
         cmdcls = CmdInstall # [FIXME]
         for i in items :
             cmdobj = cmdcls()
-            self.__schedule_task(pool, cmdobj, i, auto=False)
+            self.__schedule_task(session, cmdobj, i, auto=False)
         with self.process_cond :
-            self.task_pools.append(pool)
+            self.sessions.append(session)
             self.process_cond.notify()
-        return pool.poolid
+        return session.ssid
 
 
     # __schedule_task:
     #
-    def __schedule_task (self, pool, cmd, item, auto) :
-        task = pool.find_task(cmd, item)
+    def __schedule_task (self, session, cmd, item, auto) :
+        task = session.find_task(cmd, item)
         # already have this task, stop here
         if task is not None :
             if not auto :
                 task.auto = False
             return task
         # create a new task object
-        task = Task(pool, cmd, item, auto)
-        pool.tasks.append(task)
+        task = Task(session, cmd, item, auto)
+        session.tasks.append(task)
         for dep_cmd, dep_item in cmd.get_depends(item) :
-            dep_task = self.__schedule_task(pool, dep_cmd, dep_item, auto=True)
+            dep_task = self.__schedule_task(session, dep_cmd, dep_item, auto=True)
             # [FIXME] ref cycle
             task.depends.append(dep_task)
             dep_task.rdepends.append(task)
@@ -922,7 +922,7 @@ class GmbdApp :
     # __main_T:
     #
     def __main_T (self) :
-        self.fixme_pool_owner = {} # [fixme]
+        self.fixme_session_owner = {} # [fixme]
         while True :
             event = self.event_queue.get()
             trace('event: %s' % repr(event))
@@ -942,17 +942,17 @@ class GmbdApp :
                     target = self.config.targets['home']
                     pkgs = self.config.list_packages()
                     builds = [self.config.get_build(target, p) for p in pkgs]
-                    poolid = self.scheduler.schedule_command('install', builds)
-                    self.fixme_pool_owner[poolid] = clid
-                    self.server.send(clid, ('pool-reg', poolid))
+                    ssid = self.scheduler.schedule_command('install', builds)
+                    self.fixme_session_owner[ssid] = clid
+                    self.server.send(clid, ('session-reg', ssid))
                 elif msgkey == 'verb-level' :
                     self.__set_client_verb_level(clid, int(msg[1]), int(msg[2]))
                 else :
                     trace("[FIXME] unknown message key: %s" % repr(msgkey))
-            elif key == 'pool-term' :
-                poolid = event[1]
-                clid = self.fixme_pool_owner[poolid]
-                self.server.send(clid, ('pool-term', poolid))
+            elif key == 'session-term' :
+                ssid = event[1]
+                clid = self.fixme_session_owner[ssid]
+                self.server.send(clid, ('session-term', ssid))
             else :
                 trace('FIXME: unhandled event: %s' % repr(event[1:]))
 
