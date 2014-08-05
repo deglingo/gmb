@@ -497,6 +497,7 @@ class Server :
     def start (self) :
         trace('starting server on port %d ...' % self.port)
         self.listen_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.listen_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.listen_sock.bind((self.host, self.port))
         self.listen_sock.listen(1)
         self.listen_thread = threading.Thread(target=self.__listen_T)
