@@ -865,40 +865,51 @@ class GmbdApp :
     # run:
     #
     def run (self) :
+        r = 0
         try:
-            # create the config
-            self.config = Config()
-            # setup the logger
-            self.__setup_logger()
-            trace('hello')
-            # parse command line
-            shortopts = 'p:'
-            longopts = ['port=']
-            opts, args = getopt.gnu_getopt(sys.argv[1:], shortopts, longopts)
-            port = 5555
-            for o, a in opts :
-                if o in ('-p', '--port') :
-                    port = int(a)
-                else :
-                    assert 0, (o, a)
-            # init the config
-            self.__init_config()
-            #
-            self.client_log_handlers = {}
-            self.session_owner = {}
-            #
-            self.event_queue = queue.Queue()
-            self.main_thread = threading.Thread(target=self.__main_T)
-            self.server = Server(port=port, event_queue=self.event_queue)
-            self.scheduler = Scheduler(self.event_queue)
-            #
-            self.main_thread.start()
-            self.server.start()
-            self.scheduler.start()
-            signal.pause()
+            self.__real_run()
+        except:
+            print_exception()
+            r = 1
         finally:
             sys.stdout.flush()
             sys.stderr.flush()
+        sys.exit(r)
+
+
+    # __real_run:
+    #
+    def __real_run (self) :
+        # create the config
+        self.config = Config()
+        # setup the logger
+        self.__setup_logger()
+        trace('hello')
+        # parse command line
+        shortopts = 'p:'
+        longopts = ['port=']
+        opts, args = getopt.gnu_getopt(sys.argv[1:], shortopts, longopts)
+        port = 5555
+        for o, a in opts :
+            if o in ('-p', '--port') :
+                port = int(a)
+            else :
+                assert 0, (o, a)
+        # init the config
+        self.__init_config()
+        #
+        self.client_log_handlers = {}
+        self.session_owner = {}
+        #
+        self.event_queue = queue.Queue()
+        self.main_thread = threading.Thread(target=self.__main_T)
+        self.server = Server(port=port, event_queue=self.event_queue)
+        self.scheduler = Scheduler(self.event_queue)
+        #
+        self.main_thread.start()
+        self.server.start()
+        self.scheduler.start()
+        signal.pause()
 
 
     # __init_config:

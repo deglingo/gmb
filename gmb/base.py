@@ -9,6 +9,8 @@ __all__ = [
     'LOG_LEVEL_CMDOUT',
     'LOG_LEVEL_CMDERR',
     'LogLevelFilter',
+    'print_exception',
+    'format_exception',
     'log_setup',
     'log',
     'trace',
@@ -16,7 +18,7 @@ __all__ = [
     'error',
 ]
 
-import sys, logging
+import os, sys, logging, traceback
     
 
 LOG_DOMAIN = None
@@ -73,6 +75,45 @@ class LogLevelFilter :
     #
     def filter (self, rec) :
         return rec.levelno in self.levels
+
+
+# print_exception:
+#
+def print_exception (exc_info=None, f=None) :
+    if f is None : f = sys.stderr
+    fmt = format_exception(exc_info)
+    f.writelines(fmt)
+    f.flush()
+
+
+# format_exception:
+#
+def format_exception (exc_info=None) :
+    if exc_info is None :
+        exc_info = sys.exc_info()
+    tp, exc, tb = exc_info
+    xtb = traceback.extract_tb(tb)
+    # format tb
+    rows = []
+    wcols = (0, 0)
+    for fn, ln, fc, co in reversed(xtb) :
+        fn = os.path.realpath(fn)
+        c0 = '%s:%d:%s%s' % (fn, ln, fc, ('' if fc[0] == '<' else '()'))
+        c1 = co
+        rows.append((c0, c1))
+        wcols = (max(wcols[0], len(c0)), max(wcols[1], len(c1)))
+    # title
+    title = '%s: %s' % (tp.__name__, exc)
+    #
+    width = max(len(title), sum(wcols) + 4)
+    sep1 = ('=' * width) + '\n'
+    sep2 = ('-' * width) + '\n'
+    out = [sep1, title+'\n', sep2]
+    rowfmt = '%%-%ds -- %%s\n' % (wcols[0])
+    for r in rows :
+        out.append(rowfmt % r)
+    out.append(sep1)
+    return out
 
 
 # log_setup:
