@@ -91,6 +91,7 @@ class GmbApp :
         fout.flush()
         fout.close()
         # recv
+        ssid = 0
         unpickler = pickle.Unpickler(fin)
         while True :
             obj = unpickler.load()
@@ -98,8 +99,12 @@ class GmbApp :
             if key == 'log' :
                 lvl, msg = obj[1]
                 log(lvl, msg)
-            elif key == 'pool-term' :
-                info('pool terminated, bye')
+            elif key == 'session-reg' :
+                assert ssid == 0
+                ssid = obj[1]
+            elif key == 'session-term' :
+                assert ssid == obj[1], (ssid, obj[1])
+                info('session terminated, bye')
                 break
             else :
                 error("unknown message key: %s" % repr(obj))
