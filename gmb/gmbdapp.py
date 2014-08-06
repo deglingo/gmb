@@ -460,20 +460,20 @@ class Client :
 
     # __init__:
     #
-    def __init__ (self, clid, sock, addr) :
+    def __init__ (self, clid, sock, addr, msg_queue, rthread, wthread) :
         self.clid = clid
         self.sock = sock
         self.addr = addr
-        self.msg_queue = queue.Queue()
+        self.msg_queue = msg_queue
+        self.rthread = rthread
+        self.wthread = wthread
 
 
     # start:
     #
     def start (self, read_T, write_T) :
-        self.read_thread = threading.Thread(target=read_T, args=(self,))
-        self.write_thread = threading.Thread(target=write_T, args=(self,))
-        self.read_thread.start()
-        self.write_thread.start()
+        self.rthread.start()
+        self.wthread.start()
 
 
 # Server
@@ -485,9 +485,10 @@ class Server :
     #
     def __init__ (self, port, event_queue) :
         self.event_queue = event_queue
+        self.intern_queue = queue.Queue()
         self.host = ''
         self.port = port
-        self.clid_counter = IDCounter()
+        self.id_counter = IDCounter()
         self.clients = {}
         self.clients_lock = threading.Lock()
 
@@ -496,12 +497,37 @@ class Server :
     #
     def start (self) :
         trace('starting server on port %d ...' % self.port)
+        self.main_thread = threading.Thread(target=self.__main_T)
         self.listen_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.listen_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.listen_sock.bind((self.host, self.port))
         self.listen_sock.listen(1)
         self.listen_thread = threading.Thread(target=self.__listen_T)
+        # start all
+        self.main_thread.start()
         self.listen_thread.start()
+
+
+    # __main_T:
+    #
+    def __main_T (self) :
+        while True :
+            evt = self.intern_queue.get()
+            if evt[0] == 'accept' :
+                conn, addr = evt[1:]
+                clid = self.id_counter.next()
+                msg_queue = queue.Queue()
+                rt = threading.Thread(target=self.__client_read_T, args=(clid, conn))
+                wt = threading.Thread(target=self.__client_write_T, args=(clid, conn, msg_queue))
+                cli = Client(clid, conn, addr, msg_queue, rt, wt)
+                trace("client %d accepted: %s" % (cli.clid, addr))
+                with self.clients_lock :
+                    self.clients[cli.clid] = cli
+                self.event_queue.put(('connect', cli.clid))
+                rt.start()
+                wt.start()
+            else :
+                assert 0, evt
 
 
     # send:
@@ -512,6 +538,7 @@ class Server :
         if client is None :
             # [fixme] ?
             trace("ERROR: client not found: %s" % clid)
+            return
         client.msg_queue.put(msg)
 
 
@@ -520,31 +547,32 @@ class Server :
     def __listen_T (self) :
         while True :
             conn, addr = self.listen_sock.accept()
-            trace('connected by %s' % repr(addr))
-            client = Client(self.clid_counter.next(), conn, addr)
-            with self.clients_lock :
-                self.clients[client.clid] = client
-            self.event_queue.put(('connect', client.clid))
-            client.start(self.__client_read_T, self.__client_write_T)
+            self.intern_queue.put(('accept', conn, addr))
+            # trace('connected by %s' % repr(addr))
+            # client = Client(self.clid_counter.next(), conn, addr)
+            # with self.clients_lock :
+            #     self.clients[client.clid] = client
+            # self.event_queue.put(('connect', client.clid))
+            # client.start(self.__client_read_T, self.__client_write_T)
 
 
     # __client_read_T:
     #
-    def __client_read_T (self, cli) :
-        f = cli.sock.makefile('rb')
+    def __client_read_T (self, clid, sock) :
+        f = sock.makefile('rb')
         unpickler = pickle.Unpickler(f)
         while True :
             obj = unpickler.load()
-            self.event_queue.put(('message', cli.clid, obj))
+            self.event_queue.put(('message', clid, obj))
 
 
     # __client_write_T:
     #
-    def __client_write_T (self, cli) :
-        f = cli.sock.makefile('wb')
+    def __client_write_T (self, clid, sock, msg_queue) :
+        f = sock.makefile('wb')
         pickler = pickle.Pickler(f)
         while True :
-            msg = cli.msg_queue.get()
+            msg = msg_queue.get()
             pickler.dump(msg)
             f.flush()
 
