@@ -575,12 +575,6 @@ class Server :
         while True :
             conn, addr = self.listen_sock.accept()
             self.intern_queue.put(('accept', conn, addr))
-            # trace('connected by %s' % repr(addr))
-            # client = Client(self.clid_counter.next(), conn, addr)
-            # with self.clients_lock :
-            #     self.clients[client.clid] = client
-            # self.event_queue.put(('connect', client.clid))
-            # client.start(self.__client_read_T, self.__client_write_T)
 
 
     # __client_read_T:
@@ -600,6 +594,7 @@ class Server :
         except:
             exc_info = sys.exc_info()
             error("error in read thread (client %d)" % clid, exc_info=exc_info)
+        f.close()
         self.intern_queue.put(('end-rthread', clid, exc_info))
 
 
@@ -620,6 +615,7 @@ class Server :
         except:
             exc_info = sys.exc_info()
             error("error in write thread (client %d)" % clid, exc_info=exc_info)
+        f.close()
         self.intern_queue.put(('end-wthread', clid, exc_info))
 
 
