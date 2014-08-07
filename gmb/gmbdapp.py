@@ -467,6 +467,8 @@ class Client :
         self.msg_queue = msg_queue
         self.rthread = rthread
         self.wthread = wthread
+        self.rclosed = False
+        self.wclosed = False
 
 
     # start:
@@ -526,9 +528,34 @@ class Server :
                 self.event_queue.put(('connect', cli.clid))
                 rt.start()
                 wt.start()
+            elif evt[0] == 'end-rthread' :
+                clid = evt[1]
+                with self.clients_lock :
+                    cli = self.clients[clid]
+                cli.msg_queue.put(None)
+                cli.rthread.join()
+                cli.rclosed = True
+                self.__close_client(cli)
+            elif evt[0] == 'end-wthread' :
+                clid = evt[1]
+                with self.clients_lock :
+                    cli = self.clients[clid]
+                cli.wthread.join()
+                cli.wclosed = True
+                self.__close_client(cli)
             else :
-                assert 0, evt
+                error("server: unknown event key: %s" % repr(evt))
 
+
+    # __close_client:
+    #
+    def __close_client (self, cli) :
+        if cli.rclosed and cli.wclosed :
+            trace("deleting client %d" % cli.clid)
+            cli.sock.close()
+            with self.clients_lock :
+                del self.clients[cli.clid]
+                
 
     # send:
     #
@@ -559,22 +586,41 @@ class Server :
     # __client_read_T:
     #
     def __client_read_T (self, clid, sock) :
-        f = sock.makefile('rb')
-        unpickler = pickle.Unpickler(f)
-        while True :
-            obj = unpickler.load()
-            self.event_queue.put(('message', clid, obj))
+        exc_info = None
+        try:
+            f = sock.makefile('rb')
+            unpickler = pickle.Unpickler(f)
+            while True :
+                try:
+                    obj = unpickler.load()
+                except EOFError:
+                    trace("got EOF from client %d" % clid)
+                    break
+                self.event_queue.put(('message', clid, obj))
+        except:
+            exc_info = sys.exc_info()
+            error("error in read thread (client %d)" % clid, exc_info=exc_info)
+        self.intern_queue.put(('end-rthread', clid, exc_info))
 
 
     # __client_write_T:
     #
     def __client_write_T (self, clid, sock, msg_queue) :
-        f = sock.makefile('wb')
-        pickler = pickle.Pickler(f)
-        while True :
-            msg = msg_queue.get()
-            pickler.dump(msg)
-            f.flush()
+        exc_info = None
+        try:
+            f = sock.makefile('wb')
+            pickler = pickle.Pickler(f)
+            while True :
+                msg = msg_queue.get()
+                if msg is None :
+                    trace("got END for client %d" % clid)
+                    break
+                pickler.dump(msg)
+                f.flush()
+        except:
+            exc_info = sys.exc_info()
+            error("error in write thread (client %d)" % clid, exc_info=exc_info)
+        self.intern_queue.put(('end-wthread', clid, exc_info))
 
 
 # Command:
