@@ -441,8 +441,11 @@ class BhvInstallGNU (BhvInstall) :
         state, stamp = item.get_state('install', 'clean')
         if state != 'done' :
             return True
-        else :
-            return False
+        build_state, build_stamp = item.get_state('build', 'clean')
+        assert build_state == 'done', build_state
+        if build_stamp > stamp :
+            return True
+        return False
 
 
     # run:
