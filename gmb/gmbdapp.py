@@ -158,6 +158,12 @@ class Config :
             pkg.configure(json.load(open(fname, 'rt')))
             self.packages[pkgname] = pkg
         trace("found %d packages" % len(self.packages))
+        self.__fix_depends()
+
+
+    def __fix_depends (self) :
+        for pkg in self.packages.values() :
+            pkg.depends = tuple(self.packages[p] for p in pkg.depends)
 
 
 # CfgTarget:
@@ -186,6 +192,7 @@ class CfgPackage :
     # configure:
     #
     def configure (self, data) :
+        self.depends = tuple(data.pop("depends", ()))        
         assert not data, data
 
 
