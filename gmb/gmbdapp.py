@@ -155,6 +155,7 @@ class Config :
             trace(" - '%s'" % pkgname)
             assert pkgname not in self.packages, pkgname
             pkg = CfgPackage(pkgname)
+            pkg.configure(json.load(open(fname, 'rt')))
             self.packages[pkgname] = pkg
         trace("found %d packages" % len(self.packages))
 
@@ -180,6 +181,12 @@ class CfgPackage :
     #
     def __init__ (self, name) :
         self.name = name
+
+
+    # configure:
+    #
+    def configure (self, data) :
+        assert not data, data
 
 
 # DBFile:
