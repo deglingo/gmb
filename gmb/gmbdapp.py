@@ -704,7 +704,8 @@ class Session :
     
     # __init__:
     #
-    def __init__ (self) :
+    def __init__ (self, config) :
+        self.config = config
         self.ssid = Session.__id_counter.next()
         self.tasks = []
 
@@ -903,9 +904,9 @@ class Scheduler :
                 
     # schedule_command:
     #
-    def schedule_command (self, cmd, items) :
+    def schedule_command (self, config, cmd, items) :
         trace("scheduling command : %s %s" % (cmd, items))
-        session = Session()
+        session = Session(config)
         cmdcls = CmdInstall # [FIXME]
         for i in items :
             cmdobj = cmdcls()
@@ -1046,7 +1047,7 @@ class GmbdApp :
                     target = self.config.targets['home']
                     pkgs = self.config.list_packages()
                     builds = [self.config.get_build(target, p) for p in pkgs]
-                    ssid = self.scheduler.schedule_command('install', builds)
+                    ssid = self.scheduler.schedule_command(self.config, 'install', builds)
                     self.session_owner[ssid] = clid
                     self.client_log_handlers[clid][1].add_session(ssid)
                     self.server.send(clid, ('session-reg', ssid))
