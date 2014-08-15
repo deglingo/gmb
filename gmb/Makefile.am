@@ -5,10 +5,12 @@ PYCC = $(abs_top_builddir)/pycc
 all-local: gmb-modules.stamp-h
 
 gmb-modules.stamp-h: $(GMB_MODULES_PY) $(PYCC)
+	err=0; \
 	for mod in $(GMB_MODULES); do \
 		test -e "$$mod.py" || $(LN_S) -v "$(srcdir)/$$mod.py" "$$mod.py"; \
-		$(PYCC) "$$mod.py"; \
-	done
+		$(PYCC) "$$mod.py" || err=`expr $$err + 1`; \
+	done; \
+	test $$err -eq 0 || { echo "modules compilation failed" >&2; exit 1; }
 	echo >$@
 
 sysconf.py: Makefile.am

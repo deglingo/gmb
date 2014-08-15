@@ -28,4 +28,4 @@ if exists(cfile) and getmtime(cfile) > getmtime(srcfile) :
     pass # up to date
 else :
     print("pycc: '%s' -> '%s' (%s)" % (srcfile, cfile, dfile))
-    py_compile.compile(srcfile, cfile, dfile)
+    py_compile.compile(srcfile, cfile, dfile, doraise=True)
