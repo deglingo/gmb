@@ -1,7 +1,7 @@
 #!@PYTHON@
 # -*- python -*-
 
-import sys, os, py_compile
+import sys, os, py_compile, errno
 from os.path import realpath, join, basename, splitext, exists, getmtime
 
 PYTHON_VERSION = '@PYTHON_VERSION@'
@@ -15,8 +15,13 @@ cache = join(os.getcwd(), '__pycache__')
 cfile = join(cache, '%s.cpython-%s%s.pyc' % (base, PYTHON_VERSION_MAJ, PYTHON_VERSION_MIN))
 
 # create the cache directory
-try: os.mkdir(cache)
-except FileExistsError: pass
+try:
+	os.mkdir(cache)
+except OSError as exc:
+	if exc.errno == errno.EEXIST :
+		pass
+	else :
+		raise
 
 # check timestamps
 if exists(cfile) and getmtime(cfile) > getmtime(srcfile) :
