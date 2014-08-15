@@ -1,6 +1,6 @@
 #
 
-import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess, json, stat, logging, logging.handlers, weakref, functools
+import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess, json, stat, logging, logging.handlers, weakref, functools, errno
 
 from gmb.base import *
 from gmb.sysconf import SYSCONF
@@ -123,8 +123,11 @@ class Config :
         self.builds = {} # map <(target, pkg), build>
         # [fixme]
         self.dbdir = '/tmp/gmbdb'
-        try: os.mkdir(self.dbdir)
-        except FileExistsError: pass
+        try:
+            os.mkdir(self.dbdir)
+        except OSError as exc:
+            if exc.errno == errno.EEXIST : pass
+            else : raise
         # [fixme]
         t = CfgTarget(name='home', prefix=os.path.join(os.environ['HOME'], 'local'))
         self.targets = {'home': t}
