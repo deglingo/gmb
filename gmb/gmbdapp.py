@@ -763,6 +763,12 @@ class SRT :
         self.__session = session
 
 
+    # get_state:
+    #
+    def get_state (self, taskid) :
+        return Task.S_WAIT
+
+
 # Task:
 #
 class Task :
@@ -901,6 +907,9 @@ class Scheduler :
     #
     def __start_task (self, session, task) :
         trace("starting task: %s" % task)
+        assert self.srt.get_state(task.taskid) == Task.S_WAIT
+        #self.srt.set_state(task.taskid, TaskState.WAITING)
+        # [REMOVEME]
         assert task.state == Task.S_WAIT
         task.state = Task.S_RUN
         session.t_wait.remove(task)
