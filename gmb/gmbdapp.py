@@ -311,6 +311,7 @@ class CfgBuild (CfgItem) :
         # [fixme]
         self.bhv_configure_cls = BhvConfigureGNU
         self.bhv_build_cls = BhvBuildGNU
+        self.bhv_check_cls = BhvCheckGNU
         self.bhv_install_cls = BhvInstallGNU
 
 
@@ -346,6 +347,12 @@ class BhvConfigure (Behaviour) :
 # BhvBuild:
 #
 class BhvBuild (Behaviour) :
+    pass
+
+
+# BhvCheck:
+#
+class BhvCheck (Behaviour) :
     pass
 
 
@@ -449,6 +456,33 @@ class BhvBuildGNU (BhvBuild) :
         trace("build %s" % item)
         self.popen(['make'], cwd=item.builddir)
         item.set_state('build', 'done')
+
+
+# BhvCheckGNU:
+#
+class BhvCheckGNU (BhvCheck) :
+
+
+    # check_run:
+    #
+    def check_run (self, cmd, item) :
+        # check state
+        state, stamp = item.get_state('check', 'clean')
+        if state != 'done' :
+            return True
+        build_state, build_stamp = item.get_state('build', 'clean')
+        assert build_state == 'done', build_state
+        if build_stamp > stamp :
+            return True
+        return False
+        
+
+    # run:
+    #
+    def run (self, cmd, item) :
+        trace("check %s" % item)
+        self.popen(['make', 'check'], cwd=item.builddir)
+        item.set_state('check', 'done')
 
 
 # BhvInstallGNU:
@@ -694,6 +728,19 @@ class CmdBuild (Command) :
         return task.item.bhv_build_cls(task)
 
 
+# CmdCheck:
+#
+class CmdCheck (Command) :
+
+    cmdname = 'check' # [fixme]
+
+    def get_depends (self, item) :
+        return ((CmdBuild(), item),)
+
+    def get_behaviour (self, task) :
+        return task.item.bhv_check_cls(task)
+
+
 # CmdInstall:
 #
 class CmdInstall (Command) :
@@ -701,7 +748,7 @@ class CmdInstall (Command) :
     cmdname = 'install' # [fixme]
 
     def get_depends (self, item) :
-        return ((CmdBuild(), item),)
+        return ((CmdCheck(), item),)
 
     def get_behaviour (self, task) :
         return task.item.bhv_install_cls(task)
