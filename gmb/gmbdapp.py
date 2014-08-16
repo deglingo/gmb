@@ -854,16 +854,19 @@ class Scheduler :
         # [FIXME] lock something here ?
         for task, status, exc_info in self.pending_tasks :
             trace("task terminated: %s (%s)" % (task, status))
-            assert task.state == Task.S_RUN
-            task.state = status
-            self.current_session.t_run.remove(task)
-            self.current_session.t_done.append(task)
             if status == Task.S_SUCCESS :
                 assert exc_info is None, exc_info
             elif status == Task.S_ERROR :
                 self.__cancel_rdepends(task)
             else :
                 assert 0, status
+            # [todo] assert self.srt.get_state(task.taskid) == Task.S_RUN
+            self.srt.set_state(task.taskid, status)
+            # [REMOVEME]
+            assert task.state == Task.S_RUN
+            task.state = status
+            self.current_session.t_run.remove(task)
+            self.current_session.t_done.append(task)
         self.pending_tasks = []
         # check if the current session has anything left to do
         if self.current_session is not None :
