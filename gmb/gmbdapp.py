@@ -908,6 +908,7 @@ class Scheduler :
     def __start_task (self, session, task) :
         trace("starting task: %s" % task)
         assert self.srt.get_state(task.taskid) == Task.S_WAIT
+        self.srt.set_state(task.taskid, Task.S_RUN)
         #self.srt.set_state(task.taskid, TaskState.WAITING)
         # [REMOVEME]
         assert task.state == Task.S_WAIT
