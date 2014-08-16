@@ -427,6 +427,13 @@ class BhvBuildGNU (BhvBuild) :
         state, stamp = item.get_state('build', 'clean')
         if state != 'done' :
             return True
+        # check depends reinstall ([fixme) lazy/strict option)
+        for pkg_dep in item.package.depends :
+            build_dep = item.config.get_build(item.target, pkg_dep)
+            state_dep, stamp_dep = build_dep.get_state('install', 'clean')
+            assert state_dep == 'done'
+            if stamp_dep > stamp :
+                return True
         # check sources modifications
         if self.__check_sources(stamp, item.source.srcdir) :
             return True
