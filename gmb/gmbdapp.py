@@ -769,6 +769,12 @@ class SRT :
         return Task.S_WAIT
 
 
+    # set_state:
+    #
+    def set_state (self, taskid, state) :
+        pass
+
+
 # Task:
 #
 class Task :
@@ -915,6 +921,7 @@ class Scheduler :
         task.state = Task.S_RUN
         session.t_wait.remove(task)
         session.t_run.append(task)
+        # [FIXME] use worker threads instead
         task_thread = threading.Thread(target=self.__run_task, args=(task,))
         task_thread.start()
 
