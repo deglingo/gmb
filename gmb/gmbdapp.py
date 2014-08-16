@@ -775,12 +775,16 @@ class Task :
     S_ERROR = 3
     S_CANCEL = 4
 
+    taskid = property(lambda s: s.__taskid)
     session = property(lambda s: s._wrsession())
+
+    __id_counter = IDCounter()
 
 
     # __init__:
     #
     def __init__ (self, session, cmd, item, auto) :
+        self.__taskid = Task.__id_counter.next()
         self._wrsession = weakref.ref(session)
         self.cmd = cmd
         self.item = item
