@@ -211,7 +211,9 @@ class DBFile :
         try:
             with open(self.fname, 'r') as f :
                 self.data = json.load(f)
-        except FileNotFoundError:
+        except IOError as exc:
+            if exc.errno != errno.ENOENT :
+                raise
             self.data = {}
 
 
@@ -396,8 +398,10 @@ class BhvConfigureGNU (BhvConfigure) :
     #
     def run (self, cmd, item) :
         trace("configure build %s" % item)
-        try: os.mkdir(item.builddir)
-        except FileExistsError: pass
+        try:
+            os.mkdir(item.builddir)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST : raise
         configure = os.path.join(item.source.srcdir, 'configure')
         cmd = [configure, '--prefix', item.target.prefix]
         self.popen(cmd, cwd=item.builddir)
@@ -1020,8 +1024,10 @@ class GmbdApp :
         hdlr.setFormatter(fmt)
         self.logger.addHandler(hdlr)
         # file handler
-        try: os.mkdir(self.config.gmbdlogdir)
-        except FileExistsError: pass
+        try:
+            os.mkdir(self.config.gmbdlogdir)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST : raise
         fname = os.path.join(self.config.gmbdlogdir, 'gmbd.log')
         h = logging.handlers.RotatingFileHandler(fname, maxBytes=512*1024, backupCount=5)
         h.doRollover()
