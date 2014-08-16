@@ -750,6 +750,19 @@ class Session :
         return True
 
 
+# SRT:
+#
+# Session runtime.
+#
+class SRT :
+
+
+    # __init__:
+    #
+    def __init__ (self, session) :
+        self.__session = session
+
+
 # Task:
 #
 class Task :
@@ -800,7 +813,8 @@ class Scheduler :
         self.max_jobs = 2 # [fixme]
         self.sessions = []
         self.pending_tasks = []
-        self.current_session = None
+        self.srt = None
+        self.current_session = None # [REMOVEME]
         self.process_cond = threading.Condition()
         self.thread = threading.Thread(target=self.__run_T)
         self.thread.start()
@@ -842,10 +856,12 @@ class Scheduler :
                       extra={'ssid': self.current_session.ssid})
                 self.event_queue.put(('session-term', self.current_session.ssid))
                 self.current_session = None
+                self.srt = None
         # if no session is currently at work, start the first one
         if self.current_session is None :
             if self.sessions :
                 self.current_session = self.sessions.pop(0)
+                self.srt = SRT(self.current_session)
                 trace("starting task session %s" % self.current_session,
                       extra={'ssid': self.current_session.ssid})
                 self.current_session.start()
