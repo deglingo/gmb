@@ -697,7 +697,13 @@ class CmdBootstrap (Command) :
     cmdname = 'bootstrap' # [fixme]
 
     def get_depends (self, item) :
-        return ()
+        depends = []
+        # [fixme]
+        config = item.config
+        target = config.targets['home']
+        depends.extend((CmdInstall(), config.get_build(target, dep))
+                       for dep in item.package.depends)
+        return depends
 
     def get_behaviour (self, task) :
         return task.item.bhv_bootstrap_cls(task)
@@ -710,13 +716,7 @@ class CmdConfigure (Command) :
     cmdname = 'configure' # [fixme]
 
     def get_depends (self, item) :
-        depends = [(CmdBootstrap(), item.source)]
-        # [fixme]
-        config = item.config
-        target = item.target
-        depends.extend((CmdInstall(), config.get_build(target, dep))
-                       for dep in item.package.depends)
-        return depends
+        return ((CmdBootstrap(), item.source),)
 
     def get_behaviour (self, task) :
         return task.item.bhv_configure_cls(task)
