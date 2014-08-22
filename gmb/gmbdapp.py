@@ -785,6 +785,26 @@ class Session :
         return [t.taskid for t in self.tasks]
 
 
+    # get_task:
+    #
+    # Return the task object associated with an id.
+    #
+    def get_task (self, taskid) :
+        # [FIXME]
+        for t in self.tasks :
+            if t.taskid == taskid :
+                return t
+        assert 0, taskid
+
+
+    # list_depends:
+    #
+    def list_depends (self, taskid, recurse=False) :
+        assert not recurse # [TODO]
+        task = self.get_task(taskid)
+        return [d.taskid for d in task.depends]
+
+
     # start:
     #
     # [REMOVEME]
@@ -833,6 +853,8 @@ class SRT :
 
     session = property(lambda s: s.__session)
     ssid = property(lambda s: s.__session.ssid)
+    n_waiting = property(lambda s: s.get_state_count(Task.S_WAIT))
+    n_running = property(lambda s: s.get_state_count(Task.S_RUN))
 
     
     # __init__:
@@ -868,10 +890,42 @@ class SRT :
         self.__states[taskid] = state
 
 
+    # get_state_count:
+    #
+    # Return the number of tasks which are in a particular state.
+    #
+    def get_state_count (self, state) :
+        return len(self.__states_map[state])
+
+
     # is_finished:
     #
     def is_finished (self) :
         return not (self.__states_map[Task.S_WAIT] or self.__states_map[Task.S_RUN])
+
+
+    # peek_ready:
+    #
+    # Peek one task ready to run (ie all its depends are done
+    # successfully) and returns its taskid or 0 if not found.
+    #
+    def peek_ready (self) :
+        for tid in self.__states_map[Task.S_WAIT] :
+            if self.is_ready(tid) :
+                return tid
+        return 0
+
+
+    # is_ready:
+    #
+    # True if the given task is ready to run.
+    #
+    def is_ready (self, taskid) :
+        for depid in self.__session.list_depends(taskid, recurse=False) :
+            depstate = self.__states[depid]
+            if depstate != Task.S_SUCCESS :
+                return False
+        return True
 
 
 # Task:
@@ -964,13 +1018,31 @@ class Scheduler :
                 return
             self.__start_session()
         # try to start the next task(s)
-        if self.current_session is not None :
-            while self.current_session.t_wait and len(self.current_session.t_run) < self.max_jobs :
-                task = self.current_session.get_next_task()
-                if task is None :
-                    assert self.current_session.t_run # !!
-                    break
-                self.__start_task(self.current_session, task)
+        while self.srt.n_waiting > 0 and self.srt.n_running < self.max_jobs :
+            taskid = self.srt.peek_ready()
+            if taskid == 0 :
+                trace("[fixme] no task is ready")
+                break
+            self.__start_task(taskid)
+
+
+    # __start_task:
+    #
+    def __start_task (self, taskid) :
+        task = self.srt.session.get_task(taskid) # [fixme]
+        trace("starting task %d (%s)" % (taskid, task))
+        assert self.srt.get_state(task.taskid) == Task.S_WAIT
+        self.srt.set_state(task.taskid, Task.S_RUN)
+        # [FIXME] use a pool of worker threads instead
+        task_thread = threading.Thread(target=self.__run_task, args=(task,))
+        task_thread.start()
+        #self.srt.set_state(task.taskid, TaskState.WAITING)
+        # [REMOVEME]
+        assert task.state == Task.S_WAIT
+        task.state = Task.S_RUN
+        session = self.current_session
+        session.t_wait.remove(task)
+        session.t_run.append(task)
 
 
     # __finalize_task:
@@ -1030,23 +1102,6 @@ class Scheduler :
         task.state == Task.S_CANCEL
         task.session.t_wait.remove(task)
         task.session.t_done.append(task)
-
-
-    # __start_task:
-    #
-    def __start_task (self, session, task) :
-        trace("starting task: %s" % task)
-        assert self.srt.get_state(task.taskid) == Task.S_WAIT
-        self.srt.set_state(task.taskid, Task.S_RUN)
-        #self.srt.set_state(task.taskid, TaskState.WAITING)
-        # [REMOVEME]
-        assert task.state == Task.S_WAIT
-        task.state = Task.S_RUN
-        session.t_wait.remove(task)
-        session.t_run.append(task)
-        # [FIXME] use worker threads instead
-        task_thread = threading.Thread(target=self.__run_task, args=(task,))
-        task_thread.start()
 
 
     # __run_task:
