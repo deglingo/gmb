@@ -910,23 +910,10 @@ class Scheduler :
     #
     def __process (self) :
         trace("scheduler: process")
-        # process all pending tasks
-        # [FIXME] lock something here ?
-        for task, status, exc_info in self.pending_tasks :
-            trace("task terminated: %s (%s)" % (task, status))
-            if status == Task.S_SUCCESS :
-                assert exc_info is None, exc_info
-            elif status == Task.S_ERROR :
-                self.__cancel_rdepends(task)
-            else :
-                assert 0, status
-            # [todo] assert self.srt.get_state(task.taskid) == Task.S_RUN
-            self.srt.set_state(task.taskid, status)
-            # [REMOVEME]
-            assert task.state == Task.S_RUN
-            task.state = status
-            self.current_session.t_run.remove(task)
-            self.current_session.t_done.append(task)
+        # finalize all pending tasks
+        while self.pending_tasks :
+            task, status, exc_info = self.pending_tasks.pop()
+            self.__finalize_task(task, status, exc_info)
         self.pending_tasks = []
         # check if the current session has anything left to do
         if self.current_session is not None :
@@ -954,6 +941,25 @@ class Scheduler :
                     assert self.current_session.t_run # !!
                     break
                 self.__start_task(self.current_session, task)
+
+
+    # __finalize_task:
+    #
+    def __finalize_task (self, task, status, exc_info) :
+        trace("task terminated: %s (%s)" % (task, status))
+        if status == Task.S_SUCCESS :
+            assert exc_info is None, exc_info
+        elif status == Task.S_ERROR :
+            self.__cancel_rdepends(task)
+        else :
+            assert 0, status
+        # [todo] assert self.srt.get_state(task.taskid) == Task.S_RUN
+        self.srt.set_state(task.taskid, status)
+        # [REMOVEME]
+        assert task.state == Task.S_RUN
+        task.state = status
+        self.current_session.t_run.remove(task)
+        self.current_session.t_done.append(task)
 
 
     # __cancel_rdepends:
