@@ -1,6 +1,6 @@
 #
 
-import sys, getopt, socket, time, pickle, logging
+import sys, getopt, socket, time, pickle, logging, pprint
 
 from gmb.base import *
 
@@ -104,7 +104,9 @@ class GmbApp :
                 ssid = obj[1]
             elif key == 'session-term' :
                 assert ssid == obj[1], (ssid, obj[1])
-                info('session terminated, bye')
+                states = obj[2]
+                info('session terminated')
+                info('states:\n%s' % pprint.pformat(states))
                 break
             else :
                 error("unknown message key: %s" % repr(obj))

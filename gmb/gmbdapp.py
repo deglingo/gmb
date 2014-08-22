@@ -1,6 +1,6 @@
 #
 
-import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess, json, stat, logging, logging.handlers, weakref, functools, errno
+import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess, json, stat, logging, logging.handlers, weakref, functools, errno, copy
 
 from gmb.base import *
 from gmb.sysconf import SYSCONF
@@ -915,6 +915,12 @@ class SRT :
         return len(self.__states_map[state])
 
 
+    # get_states_map:
+    #
+    def get_states_map (self) :
+        return copy.deepcopy(self.__states_map)
+
+
     # is_finished:
     #
     def is_finished (self) :
@@ -1083,7 +1089,7 @@ class Scheduler :
     def __finalize_session (self) :
         trace("session finished: %s" % self.srt.session,
               extra={'ssid': self.srt.ssid})
-        self.event_queue.put(('session-term', self.srt.ssid))
+        self.event_queue.put(('session-term', self.srt.ssid, self.srt.get_states_map()))
         self.srt = None
 
 
@@ -1278,8 +1284,9 @@ class GmbdApp :
                     trace("[FIXME] unknown message key: %s" % repr(msgkey))
             elif key == 'session-term' :
                 ssid = event[1]
+                states = event[2]
                 clid = self.session_owner[ssid]
-                self.server.send(clid, ('session-term', ssid))
+                self.server.send(clid, ('session-term', ssid, states))
             else :
                 trace('FIXME: unhandled event: %s' % repr(event[1:]))
 
