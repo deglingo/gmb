@@ -777,7 +777,17 @@ class Session :
         self.tasks = []
 
 
+    # list_tasks:
+    #
+    # Return all taskid registered for this session.
+    #
+    def list_tasks (self) :
+        return [t.taskid for t in self.tasks]
+
+
     # start:
+    #
+    # [REMOVEME]
     #
     def start (self) :
         self.t_wait = list(self.tasks)
@@ -786,6 +796,8 @@ class Session :
 
 
     # find_task:
+    #
+    # [FIXME]
     #
     def find_task (self, cmd, item) :
         # [fixme]
@@ -796,6 +808,8 @@ class Session :
 
 
     # get_next_task:
+    #
+    # [REMOVEME]
     #
     def get_next_task (self) :
         for task in self.t_wait :
@@ -817,22 +831,47 @@ class Session :
 class SRT :
 
 
+    session = property(lambda s: s.__session)
+    ssid = property(lambda s: s.__session.ssid)
+
+    
     # __init__:
     #
     def __init__ (self, session) :
         self.__session = session
+        tlist = session.list_tasks()
+        self.__states = dict((t, Task.S_WAIT)
+                             for t in tlist)
+        self.__states_map = {
+            Task.S_WAIT:    set(tlist),
+            Task.S_RUN:     set(),
+            Task.S_SUCCESS: set(),
+            Task.S_ERROR:   set(),
+            Task.S_CANCEL:  set(),
+        }
 
 
     # get_state:
     #
     def get_state (self, taskid) :
-        return Task.S_WAIT
+        return self.__states[taskid]
 
 
     # set_state:
     #
     def set_state (self, taskid, state) :
-        pass
+        old_state = self.__states[taskid]
+        if old_state == state :
+            return
+        self.__states_map[old_state].remove(taskid)
+        self.__states_map[state].add(taskid)
+        self.__states[taskid] = state
+
+
+    # is_finished:
+    #
+    def is_finished (self) :
+        return not (self.__states_map[Task.S_WAIT] or self.__states_map[Task.S_RUN])
 
 
 # Task:
@@ -915,14 +954,9 @@ class Scheduler :
             task, status, exc_info = self.pending_tasks.pop()
             self.__finalize_task(task, status, exc_info)
         self.pending_tasks = []
-        # check if the current session has anything left to do
-        if self.current_session is not None :
-            if not (self.current_session.t_wait or self.current_session.t_run) :
-                trace("session finished: %s" % self.current_session,
-                      extra={'ssid': self.current_session.ssid})
-                self.event_queue.put(('session-term', self.current_session.ssid))
-                self.current_session = None
-                self.srt = None
+        # finalize the current session if all tasks are done
+        if self.srt is not None and self.srt.is_finished() :
+            self.__finalize_session()
         # if no session is currently at work, start the first one
         if self.current_session is None :
             if self.sessions :
@@ -960,6 +994,17 @@ class Scheduler :
         task.state = status
         self.current_session.t_run.remove(task)
         self.current_session.t_done.append(task)
+
+
+    # __finalize_session:
+    #
+    def __finalize_session (self) :
+        trace("session finished: %s" % self.srt.session,
+              extra={'ssid': self.srt.ssid})
+        self.event_queue.put(('session-term', self.srt.ssid))
+        self.srt = None
+        # [REMOVEME]
+        self.current_session = None
 
 
     # __cancel_rdepends:
