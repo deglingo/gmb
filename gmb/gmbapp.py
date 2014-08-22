@@ -105,12 +105,28 @@ class GmbApp :
             elif key == 'session-term' :
                 assert ssid == obj[1], (ssid, obj[1])
                 states = obj[2]
-                info('session terminated')
-                info('states:\n%s' % pprint.pformat(states))
+                if states[TaskState.ERROR] or states[TaskState.CANCELLED] :
+                    status, status_str = 1, 'ERROR'
+                else :
+                    status, status_str = 0, 'SUCCESS'
+                info('session %d terminated: %s (%s)' %
+                     (ssid, status_str, self.states_summary(states)))
                 break
             else :
                 error("unknown message key: %s" % repr(obj))
-        info("all done!")
+        sys.exit(status)
+
+    def states_summary (self, states) :
+        sl = ((TaskState.SUCCESS, 'success', 'success'),
+              (TaskState.ERROR, 'error', 'errors'),
+              (TaskState.CANCELLED, 'cancelled', 'cancelled'))
+        summary = []
+        for st, s, p in sl :
+            n = len(states[st])
+            if n == 0 : pass
+            elif n == 1 : summary.append((n, s))
+            else : summary.append((n, p))
+        return ', '.join('%d %s' % p for p in summary)
 
 # exec
 if __name__ == '__main__' :
