@@ -983,7 +983,6 @@ class Scheduler :
         self.sessions = []
         self.pending_tasks = []
         self.srt = None
-        self.current_session = None # [REMOVEME]
         self.process_cond = threading.Condition()
         self.thread = threading.Thread(target=self.__run_T)
         self.thread.start()
@@ -1036,13 +1035,6 @@ class Scheduler :
         # [FIXME] use a pool of worker threads instead
         task_thread = threading.Thread(target=self.__run_task, args=(task,))
         task_thread.start()
-        #self.srt.set_state(task.taskid, TaskState.WAITING)
-        # [REMOVEME]
-        assert task.state == Task.S_WAIT
-        task.state = Task.S_RUN
-        session = self.current_session
-        session.t_wait.remove(task)
-        session.t_run.append(task)
 
 
     # __finalize_task:
@@ -1055,13 +1047,8 @@ class Scheduler :
             self.__cancel_rdepends(task)
         else :
             assert 0, status
-        # [todo] assert self.srt.get_state(task.taskid) == Task.S_RUN
+        assert self.srt.get_state(task.taskid) == Task.S_RUN
         self.srt.set_state(task.taskid, status)
-        # [REMOVEME]
-        assert task.state == Task.S_RUN
-        task.state = status
-        self.current_session.t_run.remove(task)
-        self.current_session.t_done.append(task)
 
 
     # __start_session:
@@ -1072,9 +1059,6 @@ class Scheduler :
         self.srt = SRT(session)
         trace("starting task session %s" % self.srt,
               extra={'ssid': self.srt.ssid})
-        # [REMOVEME]
-        self.current_session = session
-        self.current_session.start()
 
 
     # __finalize_session:
@@ -1084,8 +1068,6 @@ class Scheduler :
               extra={'ssid': self.srt.ssid})
         self.event_queue.put(('session-term', self.srt.ssid))
         self.srt = None
-        # [REMOVEME]
-        self.current_session = None
 
 
     # __cancel_rdepends:
