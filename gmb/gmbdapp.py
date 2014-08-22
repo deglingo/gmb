@@ -958,15 +958,11 @@ class Scheduler :
         if self.srt is not None and self.srt.is_finished() :
             self.__finalize_session()
         # if no session is currently at work, start the first one
-        if self.current_session is None :
-            if self.sessions :
-                self.current_session = self.sessions.pop(0)
-                self.srt = SRT(self.current_session)
-                trace("starting task session %s" % self.current_session,
-                      extra={'ssid': self.current_session.ssid})
-                self.current_session.start()
-            else :
-                trace("all task sessions finished")
+        if self.srt is None :
+            if not self.sessions :
+                trace("all sessions finished")
+                return
+            self.__start_session()
         # try to start the next task(s)
         if self.current_session is not None :
             while self.current_session.t_wait and len(self.current_session.t_run) < self.max_jobs :
@@ -994,6 +990,19 @@ class Scheduler :
         task.state = status
         self.current_session.t_run.remove(task)
         self.current_session.t_done.append(task)
+
+
+    # __start_session:
+    #
+    def __start_session (self) :
+        assert self.srt is None
+        session = self.sessions.pop(0)
+        self.srt = SRT(session)
+        trace("starting task session %s" % self.srt,
+              extra={'ssid': self.srt.ssid})
+        # [REMOVEME]
+        self.current_session = session
+        self.current_session.start()
 
 
     # __finalize_session:
