@@ -1116,12 +1116,18 @@ class Scheduler :
         exc_info = None
         try:
             bhv = task.cmd.get_behaviour(task)
+            trace("behaviour: %s" % bhv)
             if bhv.check_run(task.cmd, task.item) :
+                trace(" -> run")
                 bhv.run(task.cmd, task.item)
+            else :
+                trace(" -> skip")
         except:
+            trace(" -> error")
             status = Task.S_ERROR
             exc_info = sys.exc_info()
             error('task %s failed' % task, exc_info=exc_info)
+        trace(" -> done")
         with self.process_cond :
             self.pending_tasks.append((task, status, exc_info))
             self.process_cond.notify()
