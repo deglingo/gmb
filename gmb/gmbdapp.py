@@ -805,6 +805,23 @@ class Session :
         return [d.taskid for d in task.depends]
 
 
+    # list_rdepends:
+    #
+    def list_rdepends (self, taskid, recurse=False) :
+        assert recurse # [TODO]
+        task = self.get_task(taskid)
+        deplist = set()
+        self._list_rdepends(task, deplist)
+        return list(deplist)
+
+    def _list_rdepends (self, task, deplist) :
+        for rdep in task.rdepends :
+            if rdep.taskid in deplist :
+                continue
+            deplist.add(rdep.taskid)
+            self._list_rdepends(rdep, deplist)
+
+
     # start:
     #
     # [REMOVEME]
@@ -1044,7 +1061,7 @@ class Scheduler :
         if status == Task.S_SUCCESS :
             assert exc_info is None, exc_info
         elif status == Task.S_ERROR :
-            self.__cancel_rdepends(task)
+            self.__cancel_rdepends(task.taskid)
         else :
             assert 0, status
         assert self.srt.get_state(task.taskid) == Task.S_RUN
@@ -1072,18 +1089,16 @@ class Scheduler :
 
     # __cancel_rdepends:
     #
-    def __cancel_rdepends (self, task) :
-        for rdep in task.rdepends :
-            self.__cancel_task(rdep)
-
-    def __cancel_task (self, task) :
-        if task.state == Task.S_CANCEL :
-            return
-        assert task.state == Task.S_WAIT, task
-        trace("task cancelled: %s" % task)
-        task.state == Task.S_CANCEL
-        task.session.t_wait.remove(task)
-        task.session.t_done.append(task)
+    def __cancel_rdepends (self, taskid) :
+        for rdep in self.srt.session.list_rdepends(taskid, recurse=True) :
+            s = self.srt.get_state(rdep)
+            if s == Task.S_CANCEL :
+                pass
+            elif s == Task.S_WAIT :
+                trace("cancelling task %d" % rdep)
+                self.srt.set_state(rdep, Task.S_CANCEL)
+            else :
+                assert 0, (rdep, s)
 
 
     # __run_task:
