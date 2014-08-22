@@ -856,7 +856,7 @@ class Session :
 
     def __check_task_run (self, task) :
         for dep in task.depends :
-            if dep.state in (Task.S_WAIT, Task.S_RUN) :
+            if dep.state in (TaskState.WAITING, TaskState.RUNNING) :
                 return False
         return True
 
@@ -870,8 +870,8 @@ class SRT :
 
     session = property(lambda s: s.__session)
     ssid = property(lambda s: s.__session.ssid)
-    n_waiting = property(lambda s: s.get_state_count(Task.S_WAIT))
-    n_running = property(lambda s: s.get_state_count(Task.S_RUN))
+    n_waiting = property(lambda s: s.get_state_count(TaskState.WAITING))
+    n_running = property(lambda s: s.get_state_count(TaskState.RUNNING))
 
     
     # __init__:
@@ -879,14 +879,14 @@ class SRT :
     def __init__ (self, session) :
         self.__session = session
         tlist = session.list_tasks()
-        self.__states = dict((t, Task.S_WAIT)
+        self.__states = dict((t, TaskState.WAITING)
                              for t in tlist)
         self.__states_map = {
-            Task.S_WAIT:    set(tlist),
-            Task.S_RUN:     set(),
-            Task.S_SUCCESS: set(),
-            Task.S_ERROR:   set(),
-            Task.S_CANCEL:  set(),
+            TaskState.WAITING:    set(tlist),
+            TaskState.RUNNING:     set(),
+            TaskState.SUCCESS: set(),
+            TaskState.ERROR:   set(),
+            TaskState.CANCELLED:  set(),
         }
 
 
@@ -924,7 +924,7 @@ class SRT :
     # is_finished:
     #
     def is_finished (self) :
-        return not (self.__states_map[Task.S_WAIT] or self.__states_map[Task.S_RUN])
+        return not (self.__states_map[TaskState.WAITING] or self.__states_map[TaskState.RUNNING])
 
 
     # peek_ready:
@@ -933,7 +933,7 @@ class SRT :
     # successfully) and returns its taskid or 0 if not found.
     #
     def peek_ready (self) :
-        for tid in self.__states_map[Task.S_WAIT] :
+        for tid in self.__states_map[TaskState.WAITING] :
             if self.is_ready(tid) :
                 return tid
         return 0
@@ -946,7 +946,7 @@ class SRT :
     def is_ready (self, taskid) :
         for depid in self.__session.list_depends(taskid, recurse=False) :
             depstate = self.__states[depid]
-            if depstate != Task.S_SUCCESS :
+            if depstate != TaskState.SUCCESS :
                 return False
         return True
 
@@ -955,13 +955,6 @@ class SRT :
 #
 class Task :
 
-
-    # states
-    S_WAIT = 0
-    S_RUN = 1
-    S_SUCCESS = 2
-    S_ERROR = 3
-    S_CANCEL = 4
 
     taskid = property(lambda s: s.__taskid)
     session = property(lambda s: s._wrsession())
@@ -977,7 +970,7 @@ class Task :
         self.cmd = cmd
         self.item = item
         self.auto = auto
-        self.state = Task.S_WAIT
+        self.state = TaskState.WAITING
         self.depends = []
         self.rdepends = []
 
@@ -1053,8 +1046,8 @@ class Scheduler :
     def __start_task (self, taskid) :
         task = self.srt.session.get_task(taskid) # [fixme]
         trace("starting task %d (%s)" % (taskid, task))
-        assert self.srt.get_state(task.taskid) == Task.S_WAIT
-        self.srt.set_state(task.taskid, Task.S_RUN)
+        assert self.srt.get_state(task.taskid) == TaskState.WAITING
+        self.srt.set_state(task.taskid, TaskState.RUNNING)
         # [FIXME] use a pool of worker threads instead
         task_thread = threading.Thread(target=self.__run_task, args=(task,))
         task_thread.start()
@@ -1064,13 +1057,13 @@ class Scheduler :
     #
     def __finalize_task (self, task, status, exc_info) :
         trace("task terminated: %s (%s)" % (task, status))
-        if status == Task.S_SUCCESS :
+        if status == TaskState.SUCCESS :
             assert exc_info is None, exc_info
-        elif status == Task.S_ERROR :
+        elif status == TaskState.ERROR :
             self.__cancel_rdepends(task.taskid)
         else :
             assert 0, status
-        assert self.srt.get_state(task.taskid) == Task.S_RUN
+        assert self.srt.get_state(task.taskid) == TaskState.RUNNING
         self.srt.set_state(task.taskid, status)
 
 
@@ -1098,11 +1091,11 @@ class Scheduler :
     def __cancel_rdepends (self, taskid) :
         for rdep in self.srt.session.list_rdepends(taskid, recurse=True) :
             s = self.srt.get_state(rdep)
-            if s == Task.S_CANCEL :
+            if s == TaskState.CANCELLED :
                 pass
-            elif s == Task.S_WAIT :
+            elif s == TaskState.WAITING :
                 trace("cancelling task %d" % rdep)
-                self.srt.set_state(rdep, Task.S_CANCEL)
+                self.srt.set_state(rdep, TaskState.CANCELLED)
             else :
                 assert 0, (rdep, s)
 
@@ -1112,7 +1105,7 @@ class Scheduler :
     def __run_task (self, task) :
         trace("running task: %s" % task)
         # [TODO] run...
-        status = Task.S_SUCCESS
+        status = TaskState.SUCCESS
         exc_info = None
         try:
             bhv = task.cmd.get_behaviour(task)
@@ -1124,7 +1117,7 @@ class Scheduler :
                 trace(" -> skip")
         except:
             trace(" -> error")
-            status = Task.S_ERROR
+            status = TaskState.ERROR
             exc_info = sys.exc_info()
             error('task %s failed' % task, exc_info=exc_info)
         trace(" -> done")

@@ -9,6 +9,7 @@ __all__ = [
     'LOG_LEVEL_CMDOUT',
     'LOG_LEVEL_CMDERR',
     'LogLevelFilter',
+    'TaskState',
     'print_exception',
     'format_exception',
     'log_setup',
@@ -75,6 +76,17 @@ class LogLevelFilter :
     #
     def filter (self, rec) :
         return rec.levelno in self.levels
+
+
+# TaskState:
+#
+class TaskState :
+
+    WAITING = 0
+    RUNNING = 1
+    SUCCESS = 2
+    ERROR = 3
+    CANCELLED = 4
 
 
 # print_exception:
