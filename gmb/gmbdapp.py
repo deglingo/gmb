@@ -1286,7 +1286,7 @@ class GmbdApp :
         clid = event[1]
         msg = event[2]
         msgkey = msg[0]
-        if msgkey == 'command' :
+        if msgkey == 'install' :
             target = self.config.targets['home']
             pkgs = self.config.list_packages()
             builds = [self.config.get_build(target, p) for p in pkgs]

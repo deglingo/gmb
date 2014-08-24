@@ -61,7 +61,7 @@ class GmbApp :
         cmd_verb_level = 1
         shortopts = 'p:VQh'
         longopts = ['port=', 'cmd-verbose', 'cmd-quiet', 'help']
-        opts, args = getopt.gnu_getopt(sys.argv[1:], shortopts, longopts)
+        opts, args = getopt.getopt(sys.argv[1:], shortopts, longopts)
         for o, a in opts :
             if o in ('-h', '--help') :
                 sys.stderr.write(USAGE)
@@ -74,6 +74,12 @@ class GmbApp :
                 cmd_verb_level -= 1
             else :
                 assert 0, (o, a)
+        # the command to send
+        # [fixme] handle multiple commands
+        if not args :
+            error("command required")
+            sys.exit(1)
+        command = tuple(args)
         # run
         host = 'localhost'
         trace('connecting to %s:%d' % (host, port))
@@ -83,11 +89,10 @@ class GmbApp :
         fout = s.makefile('wb')
         fin = s.makefile('rb')
         # send
-        msg = ('verb-level', 6, cmd_verb_level)
-        pickle.dump(msg, fout)
-        fout.flush()
-        msg = ('command', 'install', '.*')
-        pickle.dump(msg, fout)
+        cmdlist = [('verb-level', 6, cmd_verb_level)]
+        cmdlist.append(command)
+        for cmd in cmdlist :
+            pickle.dump(cmd, fout)
         fout.flush()
         fout.close()
         # recv
