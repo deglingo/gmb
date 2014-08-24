@@ -89,7 +89,7 @@ class ClientLogHandler (logging.Handler) :
     # emit:
     #
     def emit (self, rec) :
-        # print("[%d/%d] >> %s" % (rec.ssid, self.clid, rec.message))
+        # print("[%d/%d] >> %s" % (rec.orderid, self.clid, rec.message))
         self.send_func(self.clid, rec)
 
 
@@ -99,14 +99,14 @@ class ClientLogFilter :
 
     def __init__ (self, clid) :
         self.clid = clid
-        self.sessions = set()
+        self.orders = set()
 
-    def add_session (self, ssid) :
-        self.sessions.add(ssid)
+    def add_order (self, orderid) :
+        self.orders.add(orderid)
 
     def filter (self, rec) :
         return getattr(rec, 'clid', 0) == self.clid \
-          or getattr(rec, 'ssid', 0) in self.sessions
+          or getattr(rec, 'orderid', 0) in self.orders
 
 
 # Config:
@@ -329,7 +329,7 @@ class Behaviour :
     # popen:
     #
     def popen (self, cmd, **kwargs) :
-        return gmbexec(cmd, log_extra={'ssid': self.task.session.ssid}, **kwargs)
+        return gmbexec(cmd, log_extra={'orderid': self.task.order.orderid}, **kwargs)
 
 
 # BhvBootstrap:
@@ -761,9 +761,9 @@ class CmdInstall (Command) :
         return task.item.bhv_install_cls(task)
 
 
-# Session:
+# Order:
 #
-class Session :
+class Order :
 
 
     __id_counter = IDCounter()
@@ -773,13 +773,13 @@ class Session :
     #
     def __init__ (self, config) :
         self.config = config
-        self.ssid = Session.__id_counter.next()
+        self.orderid = Order.__id_counter.next()
         self.tasks = []
 
 
     # list_tasks:
     #
-    # Return all taskid registered for this session.
+    # Return all taskid registered for this order.
     #
     def list_tasks (self) :
         return [t.taskid for t in self.tasks]
@@ -861,24 +861,24 @@ class Session :
         return True
 
 
-# SRT:
+# ORT:
 #
-# Session runtime.
+# Order runtime.
 #
-class SRT :
+class ORT :
 
 
-    session = property(lambda s: s.__session)
-    ssid = property(lambda s: s.__session.ssid)
+    order = property(lambda s: s.__order)
+    orderid = property(lambda s: s.__order.orderid)
     n_waiting = property(lambda s: s.get_state_count(TaskState.WAITING))
     n_running = property(lambda s: s.get_state_count(TaskState.RUNNING))
 
     
     # __init__:
     #
-    def __init__ (self, session) :
-        self.__session = session
-        tlist = session.list_tasks()
+    def __init__ (self, order) :
+        self.__order = order
+        tlist = order.list_tasks()
         self.__states = dict((t, TaskState.WAITING)
                              for t in tlist)
         self.__states_map = {
@@ -944,7 +944,7 @@ class SRT :
     # True if the given task is ready to run.
     #
     def is_ready (self, taskid) :
-        for depid in self.__session.list_depends(taskid, recurse=False) :
+        for depid in self.__order.list_depends(taskid, recurse=False) :
             depstate = self.__states[depid]
             if depstate != TaskState.SUCCESS :
                 return False
@@ -957,16 +957,16 @@ class Task :
 
 
     taskid = property(lambda s: s.__taskid)
-    session = property(lambda s: s._wrsession())
+    order = property(lambda s: s._wrorder())
 
     __id_counter = IDCounter()
 
 
     # __init__:
     #
-    def __init__ (self, session, cmd, item, auto) :
+    def __init__ (self, order, cmd, item, auto) :
         self.__taskid = Task.__id_counter.next()
-        self._wrsession = weakref.ref(session)
+        self._wrorder = weakref.ref(order)
         self.cmd = cmd
         self.item = item
         self.auto = auto
@@ -996,9 +996,9 @@ class Scheduler :
     #
     def start (self) :
         self.max_jobs = 2 # [fixme]
-        self.sessions = []
+        self.orders = []
         self.pending_tasks = []
-        self.srt = None
+        self.ort = None
         self.process_cond = threading.Condition()
         self.thread = threading.Thread(target=self.__run_T)
         self.thread.start()
@@ -1023,18 +1023,18 @@ class Scheduler :
             task, status, exc_info = self.pending_tasks.pop()
             self.__finalize_task(task, status, exc_info)
         self.pending_tasks = []
-        # finalize the current session if all tasks are done
-        if self.srt is not None and self.srt.is_finished() :
-            self.__finalize_session()
-        # if no session is currently at work, start the first one
-        if self.srt is None :
-            if not self.sessions :
-                trace("all sessions finished")
+        # finalize the current order if all tasks are done
+        if self.ort is not None and self.ort.is_finished() :
+            self.__finalize_order()
+        # if no order is currently at work, start the first one
+        if self.ort is None :
+            if not self.orders :
+                trace("all orders finished")
                 return
-            self.__start_session()
+            self.__start_order()
         # try to start the next task(s)
-        while self.srt.n_waiting > 0 and self.srt.n_running < self.max_jobs :
-            taskid = self.srt.peek_ready()
+        while self.ort.n_waiting > 0 and self.ort.n_running < self.max_jobs :
+            taskid = self.ort.peek_ready()
             if taskid == 0 :
                 trace("[fixme] no task is ready")
                 break
@@ -1044,10 +1044,10 @@ class Scheduler :
     # __start_task:
     #
     def __start_task (self, taskid) :
-        task = self.srt.session.get_task(taskid) # [fixme]
+        task = self.ort.order.get_task(taskid) # [fixme]
         trace("starting task %d (%s)" % (taskid, task))
-        assert self.srt.get_state(task.taskid) == TaskState.WAITING
-        self.srt.set_state(task.taskid, TaskState.RUNNING)
+        assert self.ort.get_state(task.taskid) == TaskState.WAITING
+        self.ort.set_state(task.taskid, TaskState.RUNNING)
         # [FIXME] use a pool of worker threads instead
         task_thread = threading.Thread(target=self.__run_task, args=(task,))
         task_thread.start()
@@ -1063,39 +1063,39 @@ class Scheduler :
             self.__cancel_rdepends(task.taskid)
         else :
             assert 0, status
-        assert self.srt.get_state(task.taskid) == TaskState.RUNNING
-        self.srt.set_state(task.taskid, status)
+        assert self.ort.get_state(task.taskid) == TaskState.RUNNING
+        self.ort.set_state(task.taskid, status)
 
 
-    # __start_session:
+    # __start_order:
     #
-    def __start_session (self) :
-        assert self.srt is None
-        session = self.sessions.pop(0)
-        self.srt = SRT(session)
-        trace("starting task session %s" % self.srt,
-              extra={'ssid': self.srt.ssid})
+    def __start_order (self) :
+        assert self.ort is None
+        order = self.orders.pop(0)
+        self.ort = ORT(order)
+        trace("starting task order %s" % self.ort,
+              extra={'orderid': self.ort.orderid})
 
 
-    # __finalize_session:
+    # __finalize_order:
     #
-    def __finalize_session (self) :
-        trace("session finished: %s" % self.srt.session,
-              extra={'ssid': self.srt.ssid})
-        self.event_queue.put(('session-term', self.srt.ssid, self.srt.get_states_map()))
-        self.srt = None
+    def __finalize_order (self) :
+        trace("order finished: %s" % self.ort.order,
+              extra={'orderid': self.ort.orderid})
+        self.event_queue.put(('order-term', self.ort.orderid, self.ort.get_states_map()))
+        self.ort = None
 
 
     # __cancel_rdepends:
     #
     def __cancel_rdepends (self, taskid) :
-        for rdep in self.srt.session.list_rdepends(taskid, recurse=True) :
-            s = self.srt.get_state(rdep)
+        for rdep in self.ort.order.list_rdepends(taskid, recurse=True) :
+            s = self.ort.get_state(rdep)
             if s == TaskState.CANCELLED :
                 pass
             elif s == TaskState.WAITING :
                 trace("cancelling task %d" % rdep)
-                self.srt.set_state(rdep, TaskState.CANCELLED)
+                self.ort.set_state(rdep, TaskState.CANCELLED)
             else :
                 assert 0, (rdep, s)
 
@@ -1130,31 +1130,31 @@ class Scheduler :
     #
     def schedule_command (self, config, cmd, items) :
         trace("scheduling command : %s %s" % (cmd, items))
-        session = Session(config)
+        order = Order(config)
         cmdcls = CmdInstall # [FIXME]
         for i in items :
             cmdobj = cmdcls()
-            self.__schedule_task(session, cmdobj, i, auto=False)
+            self.__schedule_task(order, cmdobj, i, auto=False)
         with self.process_cond :
-            self.sessions.append(session)
+            self.orders.append(order)
             self.process_cond.notify()
-        return session.ssid
+        return order.orderid
 
 
     # __schedule_task:
     #
-    def __schedule_task (self, session, cmd, item, auto) :
-        task = session.find_task(cmd, item)
+    def __schedule_task (self, order, cmd, item, auto) :
+        task = order.find_task(cmd, item)
         # already have this task, stop here
         if task is not None :
             if not auto :
                 task.auto = False
             return task
         # create a new task object
-        task = Task(session, cmd, item, auto)
-        session.tasks.append(task)
+        task = Task(order, cmd, item, auto)
+        order.tasks.append(task)
         for dep_cmd, dep_item in cmd.get_depends(item) :
-            dep_task = self.__schedule_task(session, dep_cmd, dep_item, auto=True)
+            dep_task = self.__schedule_task(order, dep_cmd, dep_item, auto=True)
             # [FIXME] ref cycle
             task.depends.append(dep_task)
             dep_task.rdepends.append(task)
@@ -1211,7 +1211,7 @@ class GmbdApp :
         self.__init_config()
         #
         self.client_log_handlers = {}
-        self.session_owner = {}
+        self.order_owner = {}
         #
         self.event_queue = queue.Queue()
         self.main_thread = threading.Thread(target=self.__main_T)
@@ -1258,7 +1258,7 @@ class GmbdApp :
         handlers = {
             'connect':      self.__on_connect,
             'message':      self.__on_message,
-            'session-term': self.__on_session_term,
+            'order-term': self.__on_order_term,
         }
         while True :
             event = self.event_queue.get()
@@ -1290,23 +1290,23 @@ class GmbdApp :
             target = self.config.targets['home']
             pkgs = self.config.list_packages()
             builds = [self.config.get_build(target, p) for p in pkgs]
-            ssid = self.scheduler.schedule_command(self.config, 'install', builds)
-            self.session_owner[ssid] = clid
-            self.client_log_handlers[clid][1].add_session(ssid)
-            self.server.send(clid, ('session-reg', ssid))
+            orderid = self.scheduler.schedule_command(self.config, 'install', builds)
+            self.order_owner[orderid] = clid
+            self.client_log_handlers[clid][1].add_order(orderid)
+            self.server.send(clid, ('order-reg', orderid))
         elif msgkey == 'verb-level' :
             self.__set_client_verb_level(clid, int(msg[1]), int(msg[2]))
         else :
             trace("[FIXME] unknown message key: %s" % repr(msgkey))
 
 
-    # __on_session_term:
+    # __on_order_term:
     #
-    def __on_session_term (self, event) :
-        ssid = event[1]
+    def __on_order_term (self, event) :
+        orderid = event[1]
         states = event[2]
-        clid = self.session_owner[ssid]
-        self.server.send(clid, ('session-term', ssid, states))
+        clid = self.order_owner[orderid]
+        self.server.send(clid, ('order-term', orderid, states))
 
 
     # __setup_client_log_handler:

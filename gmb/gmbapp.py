@@ -96,7 +96,7 @@ class GmbApp :
         fout.flush()
         fout.close()
         # recv
-        ssid = 0
+        orderid = 0
         unpickler = pickle.Unpickler(fin)
         while True :
             obj = unpickler.load()
@@ -104,18 +104,18 @@ class GmbApp :
             if key == 'log' :
                 lvl, msg = obj[1]
                 log(lvl, msg)
-            elif key == 'session-reg' :
-                assert ssid == 0
-                ssid = obj[1]
-            elif key == 'session-term' :
-                assert ssid == obj[1], (ssid, obj[1])
+            elif key == 'order-reg' :
+                assert orderid == 0
+                orderid = obj[1]
+            elif key == 'order-term' :
+                assert orderid == obj[1], (orderid, obj[1])
                 states = obj[2]
                 if states[TaskState.ERROR] or states[TaskState.CANCELLED] :
                     status, status_str = 1, 'ERROR'
                 else :
                     status, status_str = 0, 'SUCCESS'
-                info('session %d terminated: %s (%s)' %
-                     (ssid, status_str, self.states_summary(states)))
+                info('order %d terminated: %s (%s)' %
+                     (orderid, status_str, self.states_summary(states)))
                 break
             else :
                 error("unknown message key: %s" % repr(obj))
