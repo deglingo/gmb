@@ -1255,39 +1255,58 @@ class GmbdApp :
     # __main_T:
     #
     def __main_T (self) :
+        handlers = {
+            'connect':      self.__on_connect,
+            'message':      self.__on_message,
+            'session-term': self.__on_session_term,
+        }
         while True :
             event = self.event_queue.get()
             trace('event: %s' % repr(event))
-            key = event[0]
-            if key == 'connect' :
-                trace('connect: %s' % repr(event[1:]))
-                clid = event[1]
-                self.__setup_client_log_handler(clid)
-                trace("client %d connected" % clid)
-            elif key == 'message' :
-                trace('message: %s' % repr(event[1:]))
-                clid = event[1]
-                msg = event[2]
-                msgkey = msg[0]
-                if msgkey == 'command' :
-                    target = self.config.targets['home']
-                    pkgs = self.config.list_packages()
-                    builds = [self.config.get_build(target, p) for p in pkgs]
-                    ssid = self.scheduler.schedule_command(self.config, 'install', builds)
-                    self.session_owner[ssid] = clid
-                    self.client_log_handlers[clid][1].add_session(ssid)
-                    self.server.send(clid, ('session-reg', ssid))
-                elif msgkey == 'verb-level' :
-                    self.__set_client_verb_level(clid, int(msg[1]), int(msg[2]))
-                else :
-                    trace("[FIXME] unknown message key: %s" % repr(msgkey))
-            elif key == 'session-term' :
-                ssid = event[1]
-                states = event[2]
-                clid = self.session_owner[ssid]
-                self.server.send(clid, ('session-term', ssid, states))
-            else :
-                trace('FIXME: unhandled event: %s' % repr(event[1:]))
+            try:
+                h = handlers[event[0]]
+            except KeyError:
+                error("no handler for event: %s" % repr(event))
+                continue
+            h(event)
+
+
+    # __on_connect:
+    #
+    def __on_connect (self, event) :
+        clid = event[1]
+        self.__setup_client_log_handler(clid)
+        trace("client %d connected" % clid)
+
+
+    # __on_message:
+    #
+    def __on_message (self, event) :
+        trace('message: %s' % repr(event[1:]))
+        clid = event[1]
+        msg = event[2]
+        msgkey = msg[0]
+        if msgkey == 'command' :
+            target = self.config.targets['home']
+            pkgs = self.config.list_packages()
+            builds = [self.config.get_build(target, p) for p in pkgs]
+            ssid = self.scheduler.schedule_command(self.config, 'install', builds)
+            self.session_owner[ssid] = clid
+            self.client_log_handlers[clid][1].add_session(ssid)
+            self.server.send(clid, ('session-reg', ssid))
+        elif msgkey == 'verb-level' :
+            self.__set_client_verb_level(clid, int(msg[1]), int(msg[2]))
+        else :
+            trace("[FIXME] unknown message key: %s" % repr(msgkey))
+
+
+    # __on_session_term:
+    #
+    def __on_session_term (self, event) :
+        ssid = event[1]
+        states = event[2]
+        clid = self.session_owner[ssid]
+        self.server.send(clid, ('session-term', ssid, states))
 
 
     # __setup_client_log_handler:
