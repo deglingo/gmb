@@ -812,6 +812,17 @@ class Order :
         self.tasks = []
 
 
+    # add_task:
+    #
+    def add_task (self, stage, item) :
+        # [fixme] store a stage, not cmd
+        cmd = Stage.get_command(stage)
+        # [fixme] remove auto ?
+        task = Task(self, cmd, item, auto=False)
+        self.tasks.append(task)
+        return task.taskid
+
+
     # list_tasks:
     #
     # Return all taskid registered for this order.
@@ -869,7 +880,7 @@ class Order :
 
     # find_task:
     #
-    # [FIXME]
+    # [REMOVEME]
     #
     def find_task (self, cmd, item) :
         # [fixme]
@@ -1323,8 +1334,9 @@ class GmbdApp :
 
         # trace("scheduling command : %s %s" % (cmd, items))
         order = Order(self.config)
+        memo = {}
         for i in builds :
-            self.__schedule_task(order, stage, i, auto=False)
+            self.__schedule_task(order, stage, i, auto=False, memo=memo)
 
         self.order_owner[order.orderid] = clid
         self.client_log_handlers[clid][1].add_order(order.orderid)
@@ -1335,23 +1347,23 @@ class GmbdApp :
 
     # __schedule_task:
     #
-    def __schedule_task (self, order, stage, item, auto) :
-        cmd = Stage.get_command(stage)
-        task = order.find_task(cmd, item)
+    def __schedule_task (self, order, stage, item, auto, memo) :
+        memo_key = (stage, item) # [fixme] itemid
+        taskid = memo.get(memo_key, 0)
         # already have this task, stop here
-        if task is not None :
-            if not auto :
-                task.auto = False
-            return task
-        # create a new task object
-        task = Task(order, cmd, item, auto)
-        order.tasks.append(task)
+        if taskid != 0 :
+            # if not auto :
+            #     task.auto = False
+            return taskid
+        # make the list if depends
+        depends = []
+        cmd = Stage.get_command(stage)
         for dep_stage, dep_item in cmd.get_depends(item) :
-            dep_task = self.__schedule_task(order, dep_stage, dep_item, auto=True)
-            # [FIXME] ref cycle
-            task.depends.append(dep_task)
-            dep_task.rdepends.append(task)
-        return task
+            depends.append(self.__schedule_task(order, dep_stage, dep_item, auto=True, memo=memo))
+        # register the task
+        taskid = order.add_task(stage, item)
+        memo[memo_key] = taskid
+        return taskid
 
 
     # __setup_client_log_handler:
