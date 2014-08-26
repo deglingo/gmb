@@ -807,24 +807,33 @@ class Stage (metaclass=StageMC) :
 class Order :
 
 
+    orderid = property(lambda s: s.__orderid)
+    
     __id_counter = IDCounter()
 
     
     # __init__:
     #
     def __init__ (self, config) :
-        self.config = config
-        self.orderid = Order.__id_counter.next()
-        self.tasks = []
+        self.__config = config
+        self.__orderid = Order.__id_counter.next()
+        self.__tasks = {}
+        self.__depends = {}
+        self.__rdepends = {}
 
 
     # add_task:
     #
-    def add_task (self, stage, item) :
+    def add_task (self, stage, item, depends) :
         # [fixme] remove auto ?
         task = Task(self, stage, item, auto=False)
-        self.tasks.append(task)
-        return task.taskid
+        tid = task.taskid
+        self.__tasks[tid] = task
+        self.__depends[tid] = set(depends)
+        self.__rdepends[tid] = set()
+        for d in depends :
+            self.__rdepends[d].add(tid)
+        return tid
 
 
     # list_tasks:
@@ -832,7 +841,7 @@ class Order :
     # Return all taskid registered for this order.
     #
     def list_tasks (self) :
-        return [t.taskid for t in self.tasks]
+        return list(self.__tasks.keys())
 
 
     # get_task:
@@ -840,75 +849,30 @@ class Order :
     # Return the task object associated with an id.
     #
     def get_task (self, taskid) :
-        # [FIXME]
-        for t in self.tasks :
-            if t.taskid == taskid :
-                return t
-        assert 0, taskid
+        return self.__tasks[taskid]
 
 
     # list_depends:
     #
     def list_depends (self, taskid, recurse=False) :
         assert not recurse # [TODO]
-        task = self.get_task(taskid)
-        return [d.taskid for d in task.depends]
+        return list(self.__depends[taskid])
 
 
     # list_rdepends:
     #
     def list_rdepends (self, taskid, recurse=False) :
         assert recurse # [TODO]
-        task = self.get_task(taskid)
         deplist = set()
-        self._list_rdepends(task, deplist)
+        self._list_rdepends(taskid, deplist)
         return list(deplist)
 
-    def _list_rdepends (self, task, deplist) :
-        for rdep in task.rdepends :
-            if rdep.taskid in deplist :
+    def _list_rdepends (self, taskid, deplist) :
+        for rdep in self.__rdepends[taskid] :
+            if rdep in deplist :
                 continue
-            deplist.add(rdep.taskid)
+            deplist.add(rdep)
             self._list_rdepends(rdep, deplist)
-
-
-    # start:
-    #
-    # [REMOVEME]
-    #
-    def start (self) :
-        self.t_wait = list(self.tasks)
-        self.t_run = []
-        self.t_done = []
-
-
-    # find_task:
-    #
-    # [REMOVEME]
-    #
-    def find_task (self, cmd, item) :
-        # [fixme]
-        for task in self.tasks :
-            if task.cmd.__class__ is cmd.__class__ and task.item is item :
-                return task
-        return None
-
-
-    # get_next_task:
-    #
-    # [REMOVEME]
-    #
-    def get_next_task (self) :
-        for task in self.t_wait :
-            if self.__check_task_run(task) :
-                return task
-        return None
-
-    def __check_task_run (self, task) :
-        for dep in task.depends :
-            if dep.state in (TaskState.WAITING, TaskState.RUNNING) :
-                return False
-        return True
 
 
 # ORT:
@@ -1366,7 +1330,7 @@ class GmbdApp :
         for dep_stage, dep_item in cmd.get_depends(item) :
             depends.append(self.__schedule_task(order, dep_stage, dep_item, auto=True, memo=memo))
         # register the task
-        taskid = order.add_task(stage, item)
+        taskid = order.add_task(stage, item, depends)
         memo[memo_key] = taskid
         return taskid
 
