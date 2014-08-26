@@ -169,6 +169,75 @@ class Config :
             pkg.depends = tuple(self.packages[p] for p in pkg.depends)
 
 
+# CfgItem:
+#
+class CfgItem :
+
+
+    # __init__:
+    #
+    def __init__ (self, config, name) :
+        self.config = config # [FIXME] ref cycle
+        self.name = name
+        dbname = '%s@%s.db' % (self.__class__.__name__.lower(), name)
+        self.dbfile = os.path.join(self.config.dbdir, dbname)
+
+
+    # get_state:
+    #
+    def get_state (self, key, defo='unset') :
+        db = DBFile(self.dbfile)
+        state, stamp = db.select(key, defo=defo)
+        db.close()
+        return state, stamp
+
+
+    # set_state:
+    #
+    def set_state (self, key, state, stamp=None) :
+        db = DBFile(self.dbfile)
+        db.insert(key, state, stamp)
+        db.close()
+
+
+# CfgSource:
+#
+class CfgSource (CfgItem) :
+
+
+    # __init__:
+    #
+    def __init__ (self, config, package) :
+        CfgItem.__init__(self, config, package.name)
+        self.package = package
+        # [fixme]
+        self.srcdir = os.path.join('/src', package.name)
+        # [fixme]
+        self.bhv_bootstrap_cls = BhvBootstrapGNU
+
+
+# CfgBuild:
+#
+class CfgBuild (CfgItem) :
+
+
+    # __init__:
+    #
+    def __init__ (self, config, target, package) :
+        CfgItem.__init__(self, config, package.name)
+        self.target = target
+        self.package = package
+        # [fixme]
+        self.source = CfgSource(config, package)
+        # [fixme]
+        self.builddir = os.path.join('/build', package.name)
+        # [fixme]
+        self.bhv_configure_cls = BhvConfigureGNU
+        self.bhv_build_cls = BhvBuildGNU
+        self.bhv_check_cls = BhvCheckGNU
+        self.bhv_install_cls = BhvInstallGNU
+
+
 # CfgTarget:
 #
 class CfgTarget :
@@ -244,75 +313,6 @@ class DBFile :
         with open(tmpfile, 'w') as f :
             json.dump(self.data, f)
         os.rename(tmpfile, self.fname)
-
-
-# CfgItem:
-#
-class CfgItem :
-
-
-    # __init__:
-    #
-    def __init__ (self, config, name) :
-        self.config = config # [FIXME] ref cycle
-        self.name = name
-        dbname = '%s@%s.db' % (self.__class__.__name__.lower(), name)
-        self.dbfile = os.path.join(self.config.dbdir, dbname)
-
-
-    # get_state:
-    #
-    def get_state (self, key, defo='unset') :
-        db = DBFile(self.dbfile)
-        state, stamp = db.select(key, defo=defo)
-        db.close()
-        return state, stamp
-
-
-    # set_state:
-    #
-    def set_state (self, key, state, stamp=None) :
-        db = DBFile(self.dbfile)
-        db.insert(key, state, stamp)
-        db.close()
-
-
-# CfgSource:
-#
-class CfgSource (CfgItem) :
-
-
-    # __init__:
-    #
-    def __init__ (self, config, package) :
-        CfgItem.__init__(self, config, package.name)
-        self.package = package
-        # [fixme]
-        self.srcdir = os.path.join('/src', package.name)
-        # [fixme]
-        self.bhv_bootstrap_cls = BhvBootstrapGNU
-
-
-# CfgBuild:
-#
-class CfgBuild (CfgItem) :
-
-
-    # __init__:
-    #
-    def __init__ (self, config, target, package) :
-        CfgItem.__init__(self, config, package.name)
-        self.target = target
-        self.package = package
-        # [fixme]
-        self.source = CfgSource(config, package)
-        # [fixme]
-        self.builddir = os.path.join('/build', package.name)
-        # [fixme]
-        self.bhv_configure_cls = BhvConfigureGNU
-        self.bhv_build_cls = BhvBuildGNU
-        self.bhv_check_cls = BhvCheckGNU
-        self.bhv_install_cls = BhvInstallGNU
 
 
 # Behaviour:
