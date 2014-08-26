@@ -12,18 +12,6 @@ def gmbrepr (obj, descr) :
     return '<%s %s>' % (obj.__class__.__name__, descr)
 
 
-# Stage:
-#
-class Stage :
-
-    INSTALL = 1
-
-    @staticmethod
-    def from_name (name) :
-        if name == 'install' : return Stage.INSTALL
-        else : assert 0, name
-
-
 # PipeThread:
 #
 class PipeThread :
@@ -713,7 +701,7 @@ class CmdBootstrap (Command) :
         # [fixme]
         config = item.config
         target = config.targets['home']
-        depends.extend((CmdInstall(), config.get_build(target, dep))
+        depends.extend((Stage.INSTALL, config.get_build(target, dep))
                        for dep in item.package.depends)
         return depends
 
@@ -728,7 +716,7 @@ class CmdConfigure (Command) :
     cmdname = 'configure' # [fixme]
 
     def get_depends (self, item) :
-        return ((CmdBootstrap(), item.source),)
+        return ((Stage.BOOTSTRAP, item.source),)
 
     def get_behaviour (self, task) :
         return task.item.bhv_configure_cls(task)
@@ -741,7 +729,7 @@ class CmdBuild (Command) :
     cmdname = 'build' # [fixme]
 
     def get_depends (self, item) :
-        return ((CmdConfigure(), item),)
+        return ((Stage.CONFIGURE, item),)
 
     def get_behaviour (self, task) :
         return task.item.bhv_build_cls(task)
@@ -754,7 +742,7 @@ class CmdCheck (Command) :
     cmdname = 'check' # [fixme]
 
     def get_depends (self, item) :
-        return ((CmdBuild(), item),)
+        return ((Stage.BUILD, item),)
 
     def get_behaviour (self, task) :
         return task.item.bhv_check_cls(task)
@@ -767,10 +755,45 @@ class CmdInstall (Command) :
     cmdname = 'install' # [fixme]
 
     def get_depends (self, item) :
-        return ((CmdCheck(), item),)
+        return ((Stage.CHECK, item),)
 
     def get_behaviour (self, task) :
         return task.item.bhv_install_cls(task)
+
+
+# StageMC:
+#
+class StageMC (type) :
+
+    def __new__ (cls, tpname, tpbases, tpdict) :
+        stage_specs = (
+            ('bootstrap', CmdBootstrap),
+            ('configure', CmdConfigure),
+            ('build',     CmdBuild),
+            ('check',     CmdCheck),
+            ('install',   CmdInstall),
+        )
+        values = tpdict['_Stage__values'] = {}
+        commands = tpdict['_Stage__commands'] = {}
+        for i, (name, cmdcls) in enumerate(stage_specs) :
+            uname = name.upper()
+            tpdict[uname] = i
+            values[name] = i
+            commands[i] = cmdcls()
+        return type.__new__(cls, tpname, tpbases, tpdict)
+
+
+# Stage:
+#
+class Stage (metaclass=StageMC) :
+
+    @staticmethod
+    def from_name (name) :
+        return Stage.__values[name]
+
+    @staticmethod
+    def get_command (stage) :
+        return Stage.__commands[stage]
 
 
 # Order:
@@ -1300,10 +1323,8 @@ class GmbdApp :
 
         # trace("scheduling command : %s %s" % (cmd, items))
         order = Order(self.config)
-        cmdcls = CmdInstall # [FIXME]
         for i in builds :
-            cmdobj = cmdcls()
-            self.__schedule_task(order, cmdobj, i, auto=False)
+            self.__schedule_task(order, stage, i, auto=False)
 
         self.order_owner[order.orderid] = clid
         self.client_log_handlers[clid][1].add_order(order.orderid)
@@ -1314,7 +1335,8 @@ class GmbdApp :
 
     # __schedule_task:
     #
-    def __schedule_task (self, order, cmd, item, auto) :
+    def __schedule_task (self, order, stage, item, auto) :
+        cmd = Stage.get_command(stage)
         task = order.find_task(cmd, item)
         # already have this task, stop here
         if task is not None :
@@ -1324,8 +1346,8 @@ class GmbdApp :
         # create a new task object
         task = Task(order, cmd, item, auto)
         order.tasks.append(task)
-        for dep_cmd, dep_item in cmd.get_depends(item) :
-            dep_task = self.__schedule_task(order, dep_cmd, dep_item, auto=True)
+        for dep_stage, dep_item in cmd.get_depends(item) :
+            dep_task = self.__schedule_task(order, dep_stage, dep_item, auto=True)
             # [FIXME] ref cycle
             task.depends.append(dep_task)
             dep_task.rdepends.append(task)
