@@ -773,11 +773,13 @@ class StageMC (type) :
             ('check',     CmdCheck),
             ('install',   CmdInstall),
         )
+        names = tpdict['_Stage__names'] = {}
         values = tpdict['_Stage__values'] = {}
         commands = tpdict['_Stage__commands'] = {}
         for i, (name, cmdcls) in enumerate(stage_specs) :
             uname = name.upper()
             tpdict[uname] = i
+            names[i] = name
             values[name] = i
             commands[i] = cmdcls()
         return type.__new__(cls, tpname, tpbases, tpdict)
@@ -790,6 +792,10 @@ class Stage (metaclass=StageMC) :
     @staticmethod
     def from_name (name) :
         return Stage.__values[name]
+
+    @staticmethod
+    def to_name (value) :
+        return Stage.__names[value]
 
     @staticmethod
     def get_command (stage) :
@@ -815,10 +821,8 @@ class Order :
     # add_task:
     #
     def add_task (self, stage, item) :
-        # [fixme] store a stage, not cmd
-        cmd = Stage.get_command(stage)
         # [fixme] remove auto ?
-        task = Task(self, cmd, item, auto=False)
+        task = Task(self, stage, item, auto=False)
         self.tasks.append(task)
         return task.taskid
 
@@ -1010,10 +1014,10 @@ class Task :
 
     # __init__:
     #
-    def __init__ (self, order, cmd, item, auto) :
+    def __init__ (self, order, stage, item, auto) :
         self.__taskid = Task.__id_counter.next()
         self._wrorder = weakref.ref(order)
-        self.cmd = cmd
+        self.stage = stage
         self.item = item
         self.auto = auto
         self.state = TaskState.WAITING
@@ -1024,7 +1028,7 @@ class Task :
     # __repr__:
     #
     def __repr__ (self) :
-        return gmbrepr(self, "%s:%s" % (self.cmd.cmdname, self.item.name))
+        return gmbrepr(self, "%s:%s" % (Stage.to_name(self.stage), self.item.name))
 
 
 # Scheduler:
@@ -1162,11 +1166,12 @@ class Scheduler :
         status = TaskState.SUCCESS
         exc_info = None
         try:
-            bhv = task.cmd.get_behaviour(task)
+            cmd = Stage.get_command(task.stage)
+            bhv = cmd.get_behaviour(task)
             trace("behaviour: %s" % bhv)
-            if bhv.check_run(task.cmd, task.item) :
+            if bhv.check_run(cmd, task.item) :
                 trace(" -> run")
-                bhv.run(task.cmd, task.item)
+                bhv.run(cmd, task.item)
             else :
                 trace(" -> skip")
         except:
