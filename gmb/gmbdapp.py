@@ -12,6 +12,18 @@ def gmbrepr (obj, descr) :
     return '<%s %s>' % (obj.__class__.__name__, descr)
 
 
+# Stage:
+#
+class Stage :
+
+    INSTALL = 1
+
+    @staticmethod
+    def from_name (name) :
+        if name == 'install' : return Stage.INSTALL
+        else : assert 0, name
+
+
 # PipeThread:
 #
 class PipeThread :
@@ -1260,7 +1272,7 @@ class GmbdApp :
         msg = event[2]
         msgkey = msg[0]
         if msgkey == 'install' :
-            self.__schedule_order(clid)
+            self.__schedule_order(clid, msg)
         elif msgkey == 'verb-level' :
             self.__set_client_verb_level(clid, int(msg[1]), int(msg[2]))
         else :
@@ -1278,7 +1290,10 @@ class GmbdApp :
 
     # __schedule_order:
     #
-    def __schedule_order (self, clid) :
+    def __schedule_order (self, clid, cmdline) :
+        trace("scheduling order: %s" % repr(cmdline))
+        stage = Stage.from_name(cmdline[0])
+        trace(" > stage: %d" % stage)
         target = self.config.targets['home']
         pkgs = self.config.list_packages()
         builds = [self.config.get_build(target, p) for p in pkgs]
