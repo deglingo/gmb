@@ -1004,6 +1004,14 @@ class Scheduler :
         self.thread.start()
 
 
+    # add_order:
+    #
+    def add_order (self, order) :
+        with self.process_cond :
+            self.orders.append(order)
+            self.process_cond.notify()
+
+
     # __run_T:
     #
     def __run_T (self) :
@@ -1124,41 +1132,6 @@ class Scheduler :
         with self.process_cond :
             self.pending_tasks.append((task, status, exc_info))
             self.process_cond.notify()
-
-                
-    # schedule_command:
-    #
-    def schedule_command (self, config, cmd, items) :
-        trace("scheduling command : %s %s" % (cmd, items))
-        order = Order(config)
-        cmdcls = CmdInstall # [FIXME]
-        for i in items :
-            cmdobj = cmdcls()
-            self.__schedule_task(order, cmdobj, i, auto=False)
-        with self.process_cond :
-            self.orders.append(order)
-            self.process_cond.notify()
-        return order.orderid
-
-
-    # __schedule_task:
-    #
-    def __schedule_task (self, order, cmd, item, auto) :
-        task = order.find_task(cmd, item)
-        # already have this task, stop here
-        if task is not None :
-            if not auto :
-                task.auto = False
-            return task
-        # create a new task object
-        task = Task(order, cmd, item, auto)
-        order.tasks.append(task)
-        for dep_cmd, dep_item in cmd.get_depends(item) :
-            dep_task = self.__schedule_task(order, dep_cmd, dep_item, auto=True)
-            # [FIXME] ref cycle
-            task.depends.append(dep_task)
-            dep_task.rdepends.append(task)
-        return task
 
 
 # GmbdApp:
@@ -1287,13 +1260,7 @@ class GmbdApp :
         msg = event[2]
         msgkey = msg[0]
         if msgkey == 'install' :
-            target = self.config.targets['home']
-            pkgs = self.config.list_packages()
-            builds = [self.config.get_build(target, p) for p in pkgs]
-            orderid = self.scheduler.schedule_command(self.config, 'install', builds)
-            self.order_owner[orderid] = clid
-            self.client_log_handlers[clid][1].add_order(orderid)
-            self.server.send(clid, ('order-reg', orderid))
+            self.__schedule_order(clid)
         elif msgkey == 'verb-level' :
             self.__set_client_verb_level(clid, int(msg[1]), int(msg[2]))
         else :
@@ -1307,6 +1274,47 @@ class GmbdApp :
         states = event[2]
         clid = self.order_owner[orderid]
         self.server.send(clid, ('order-term', orderid, states))
+
+
+    # __schedule_order:
+    #
+    def __schedule_order (self, clid) :
+        target = self.config.targets['home']
+        pkgs = self.config.list_packages()
+        builds = [self.config.get_build(target, p) for p in pkgs]
+
+        # trace("scheduling command : %s %s" % (cmd, items))
+        order = Order(self.config)
+        cmdcls = CmdInstall # [FIXME]
+        for i in builds :
+            cmdobj = cmdcls()
+            self.__schedule_task(order, cmdobj, i, auto=False)
+
+        self.order_owner[order.orderid] = clid
+        self.client_log_handlers[clid][1].add_order(order.orderid)
+        self.server.send(clid, ('order-reg', order.orderid))
+
+        self.scheduler.add_order(order)
+
+
+    # __schedule_task:
+    #
+    def __schedule_task (self, order, cmd, item, auto) :
+        task = order.find_task(cmd, item)
+        # already have this task, stop here
+        if task is not None :
+            if not auto :
+                task.auto = False
+            return task
+        # create a new task object
+        task = Task(order, cmd, item, auto)
+        order.tasks.append(task)
+        for dep_cmd, dep_item in cmd.get_depends(item) :
+            dep_task = self.__schedule_task(order, dep_cmd, dep_item, auto=True)
+            # [FIXME] ref cycle
+            task.depends.append(dep_task)
+            dep_task.rdepends.append(task)
+        return task
 
 
     # __setup_client_log_handler:
