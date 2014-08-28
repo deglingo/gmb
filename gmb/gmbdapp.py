@@ -1,6 +1,6 @@
 #
 
-import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess, json, stat, logging, logging.handlers, weakref, functools, errno, copy
+import os, sys, glob, getopt, queue, socket, signal, threading, pickle, time, subprocess, json, stat, logging, logging.handlers, weakref, functools, errno, copy, re
 
 from gmb.base import *
 from gmb.sysconf import SYSCONF
@@ -136,6 +136,13 @@ class Config :
     #
     def list_packages (self) :
         return list(self.packages.values())
+
+
+    # list_target_packages:
+    #
+    def list_target_packages (self, target) :
+        # [fixme]
+        return self.list_packages()
 
 
     # get_build:
@@ -1294,13 +1301,19 @@ class GmbdApp :
     # __schedule_order:
     #
     def __schedule_order (self, clid, cmdline) :
+        config = self.config
         trace("scheduling order: %s" % repr(cmdline))
         stage = Stage.from_name(cmdline[0])
         trace(" > stage: %d" % stage)
-        target = self.config.targets['home']
+        default_targets = [self.config.targets['home']]
         pkgs = self.config.list_packages()
-        builds = [self.config.get_build(target, p) for p in pkgs]
-
+        builds = self.__select_builds(config, default_targets, cmdline[1:])
+        if builds :
+            trace("%d builds selected: %s" %
+                  (len(builds), ', '.join(repr(b) for b in builds)))
+        else :
+            warning("no build selected")
+            return
         # trace("scheduling command : %s %s" % (cmd, items))
         order = Order(self.config)
         memo = {}
@@ -1312,6 +1325,26 @@ class GmbdApp :
         self.server.send(clid, ('order-reg', order.orderid))
 
         self.scheduler.add_order(order)
+
+
+    # __select_builds:
+    #
+    def __select_builds (self, config, default_targets, patterns) :
+        builds = set()
+        for pat in patterns :
+            mpat = re.compile(pat).match
+            # [fixme] extract target from pattern
+            targets = default_targets
+            l = set()
+            for targ in targets :
+                l.update(config.get_build(targ, pkg)
+                         for pkg in config.list_target_packages(targ)
+                         if mpat(pkg.name))
+            if l :
+                builds.update(l)
+            else :
+                warning("pattern '%s' did not match any package")
+        return builds
 
 
     # __schedule_task:
