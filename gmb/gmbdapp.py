@@ -388,8 +388,18 @@ class BhvBootstrapGNU (BhvBootstrap) :
     #
     def run (self, cmd, item) :
         trace("bootstrapping source %s" % item)
-        cmd = ['sh', './autogen']
-        self.popen(cmd, cwd=item.srcdir)
+        # [FIXME] this is for glib only, should be config var
+        env = dict(os.environ)
+        env['NOCONFIGURE'] = '1'
+        # [FIXME] same thing here
+        if os.path.exists(os.path.join(item.srcdir, 'autogen.sh')) :
+            autogen = './autogen.sh'
+        elif os.path.exists(os.path.join(item.srcdir, 'autogen')) :
+            autogen = './autogen'
+        else :
+            raise Exception('autogen script not found')
+        cmd = ['sh', autogen]
+        self.popen(cmd, cwd=item.srcdir, env=env)
         item.set_state('bootstrap', 'done')
 
 
